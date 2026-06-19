@@ -50,49 +50,8 @@ body {
   cursor: pointer;
 }
 
-#ov-constellation-btn {
-  position: fixed !important;
-  top: 0 !important;
-  right: 12px !important;
-  z-index: 100000 !important;
-}
-
+#ov-constellation-btn,
 #ov-constellation-panel {
-  position: fixed !important;
-  top: 36px !important;
-  right: 12px !important;
-  z-index: 100000 !important;
-}
-
-/* Home-screen shortcut: content draws under the status bar */
-@media (display-mode: standalone), (display-mode: fullscreen) {
-  #ov-constellation-btn {
-    top: env(safe-area-inset-top, 0px) !important;
-    right: max(12px, env(safe-area-inset-right, 0px)) !important;
-  }
-
-  #ov-constellation-panel {
-    top: calc(env(safe-area-inset-top, 0px) + 36px) !important;
-    right: max(12px, env(safe-area-inset-right, 0px)) !important;
-  }
-}
-
-@media (min-width: 640px) {
-  #ov-constellation-btn {
-    right: 20px !important;
-  }
-
-  #ov-constellation-panel {
-    right: 20px !important;
-  }
-
-  @media (display-mode: standalone), (display-mode: fullscreen) {
-    #ov-constellation-btn {
-      right: max(20px, env(safe-area-inset-right, 0px)) !important;
-    }
-
-    #ov-constellation-panel {
-      right: max(20px, env(safe-area-inset-right, 0px)) !important;
-    }
-  }
+  position: fixed;
+  z-index: 100000;
 }
