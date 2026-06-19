@@ -20,6 +20,7 @@ import {
 const PROPAGATE_INTERVAL_MS = 50;
 const SNAP_TIME_JUMP_MS = 5_000;
 const DEFAULT_CAMERA_DISTANCE = 6;
+const CAMERA_SIZE_EPSILON = 0.02;
 
 interface RenderGroup {
   key: string;
@@ -95,6 +96,7 @@ export function SatelliteField({
   const lastPropagateRef = useRef(0);
   const blendRef = useRef(1);
   const lastSimTimeRef = useRef(simTimeRef.current);
+  const lastCameraDistanceRef = useRef(-1);
 
   const seedPositions = useCallback(
     (groupList: RenderGroup[]) => {
@@ -145,7 +147,7 @@ export function SatelliteField({
     const shouldSnap = isScrubbing || timeJumpMs >= SNAP_TIME_JUMP_MS;
     const shouldPropagate =
       simTimeChanged &&
-      (shouldSnap || blendRef.current >= 1 || now - lastPropagateRef.current >= PROPAGATE_INTERVAL_MS);
+      (shouldSnap || now - lastPropagateRef.current >= PROPAGATE_INTERVAL_MS);
 
     if (shouldPropagate) {
       lastPropagateRef.current = now;
@@ -173,23 +175,38 @@ export function SatelliteField({
       blendRef.current = shouldSnap ? 1 : 0;
     }
 
-    if (!shouldSnap && blendRef.current < 1) {
-      blendRef.current = Math.min(1, blendRef.current + delta / (PROPAGATE_INTERVAL_MS / 1000));
+    const blend = blendRef.current;
+    const isBlending = blend < 1;
+
+    if (isBlending) {
+      blendRef.current = Math.min(1, blend + delta / (PROPAGATE_INTERVAL_MS / 1000));
+
+      for (const group of activeGroups) {
+        lerpPositionBuffers(group.previous, group.target, group.display, blend);
+      }
     }
 
-    const blend = blendRef.current;
+    const cameraMoved =
+      Math.abs(cameraDistance - lastCameraDistanceRef.current) >= CAMERA_SIZE_EPSILON;
+    if (cameraMoved) {
+      lastCameraDistanceRef.current = cameraDistance;
+    }
+
+    if (!isBlending && !shouldPropagate && !cameraMoved) return;
 
     for (const group of activeGroups) {
-      lerpPositionBuffers(group.previous, group.target, group.display, blend);
-
       const node = pointsRefs.current.get(group.key) as THREE.Points | undefined;
       if (!node) continue;
 
-      const positionAttr = node.geometry.attributes.position;
-      if (positionAttr) positionAttr.needsUpdate = true;
+      if (isBlending || shouldPropagate) {
+        const positionAttr = node.geometry.attributes.position;
+        if (positionAttr) positionAttr.needsUpdate = true;
+      }
 
-      const material = node.material as THREE.PointsMaterial;
-      material.size = resolvePointSize(group.sizePolicy, cameraDistance, maxCameraDistance);
+      if (cameraMoved) {
+        const material = node.material as THREE.PointsMaterial;
+        material.size = resolvePointSize(group.sizePolicy, cameraDistance, maxCameraDistance);
+      }
     }
   });
 

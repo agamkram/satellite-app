@@ -26,6 +26,11 @@
 .celestrak-cache
 *.pem
 
+# local deploy helpers (not part of the app)
+PUSH-TO-GITHUB.command
+ADD-SSH-KEY-TO-GITHUB.txt
+ORBITAL-VIEW-PROJECT-SUMMARY.txt
+
 # debug
 npm-debug.log*
 yarn-debug.log*

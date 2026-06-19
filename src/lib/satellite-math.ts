@@ -25,6 +25,25 @@ export interface SerializedSatellite {
 
 export type OmmRecord = OMMJsonObject;
 
+function propagateEci(
+  satrec: SatRec,
+  date: Date,
+): { x: number; y: number; z: number } | null {
+  const result = satellite.propagate(satrec, date);
+  if (!result?.position || typeof result.position === "boolean") return null;
+
+  const { x, y, z } = result.position;
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return null;
+
+  return { x, y, z };
+}
+
+function writeHidden(positions: Float32Array, offset: number) {
+  positions[offset] = HIDDEN_POSITION;
+  positions[offset + 1] = HIDDEN_POSITION;
+  positions[offset + 2] = HIDDEN_POSITION;
+}
+
 export function parseOmmRecord(
   record: OMMJsonObject,
   constellationId: string,
@@ -51,42 +70,23 @@ export function writeSatellitePosition(
   index: number,
 ): void {
   const offset = index * 3;
-  const result = satellite.propagate(satrec, date);
+  const eci = propagateEci(satrec, date);
 
-  if (!result?.position || typeof result.position === "boolean") {
-    positions[offset] = HIDDEN_POSITION;
-    positions[offset + 1] = HIDDEN_POSITION;
-    positions[offset + 2] = HIDDEN_POSITION;
+  if (!eci) {
+    writeHidden(positions, offset);
     return;
   }
 
-  const { x, y, z } = result.position;
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
-    positions[offset] = HIDDEN_POSITION;
-    positions[offset + 1] = HIDDEN_POSITION;
-    positions[offset + 2] = HIDDEN_POSITION;
-    return;
-  }
-
-  positions[offset] = x * SCENE_SCALE;
-  positions[offset + 1] = z * SCENE_SCALE;
-  positions[offset + 2] = -y * SCENE_SCALE;
+  positions[offset] = eci.x * SCENE_SCALE;
+  positions[offset + 1] = eci.z * SCENE_SCALE;
+  positions[offset + 2] = -eci.y * SCENE_SCALE;
 }
 
 export function computeOrbitalRadiusScene(satrec: SatRec, date: Date): number | null {
-  const result = satellite.propagate(satrec, date);
+  const eci = propagateEci(satrec, date);
+  if (!eci) return null;
 
-  if (!result?.position || typeof result.position === "boolean") {
-    return null;
-  }
-
-  const { x, y, z } = result.position;
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
-    return null;
-  }
-
-  const radiusKm = Math.hypot(x, y, z);
-  return radiusKm * SCENE_SCALE;
+  return Math.hypot(eci.x, eci.y, eci.z) * SCENE_SCALE;
 }
 
 export function computeMaxOrbitalRadiusScene(

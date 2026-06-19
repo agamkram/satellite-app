@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { Constellation } from "@/lib/constellations";
+import { CONSTELLATIONS } from "@/lib/constellations";
 import { measureHomeScreenInsets } from "@/lib/ios-home-screen";
 
 interface ConstellationLegendProps {
-  constellations: Constellation[];
   counts: Record<string, number>;
   visibleConstellations: Record<string, boolean>;
   open: boolean;
@@ -29,7 +28,6 @@ function getEdgeInset(wide: boolean) {
 }
 
 export function ConstellationLegend({
-  constellations,
   counts,
   visibleConstellations,
   open,
@@ -61,10 +59,10 @@ export function ConstellationLegend({
 
   const sortedConstellations = useMemo(
     () =>
-      [...constellations].sort(
+      [...CONSTELLATIONS].sort(
         (a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0),
       ),
-    [constellations, counts],
+    [counts],
   );
 
   if (!mounted) return null;

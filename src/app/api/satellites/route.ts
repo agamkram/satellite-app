@@ -80,22 +80,21 @@ async function fetchStarlinkFallback(): Promise<SerializedSatellite[]> {
 async function fetchConstellation(
   constellationId: string,
   group: string,
-): Promise<{ satellites: SerializedSatellite[]; cached: boolean }> {
+): Promise<SerializedSatellite[]> {
   const cached = await readCachedGroup(group);
   if (cached && isCacheFresh(cached)) {
-    return { satellites: cached.satellites, cached: true };
+    return cached.satellites;
   }
 
   const records = await downloadGroup(group);
 
   if (records.length === 0) {
     if (group === "starlink") {
-      const satellites = await fetchStarlinkFallback();
-      return { satellites, cached: false };
+      return fetchStarlinkFallback();
     }
 
     if (cached) {
-      return { satellites: cached.satellites, cached: true };
+      return cached.satellites;
     }
 
     throw new Error(
@@ -105,7 +104,7 @@ async function fetchConstellation(
 
   const satellites = serializeRecords(records, constellationId);
   await writeCachedGroup(group, satellites);
-  return { satellites, cached: false };
+  return satellites;
 }
 
 export async function GET(request: NextRequest) {
@@ -121,17 +120,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unknown constellation group" }, { status: 400 });
     }
 
-    const { satellites, cached } = await fetchConstellation(
-      constellation.id,
-      constellation.group,
-    );
+    const satellites = await fetchConstellation(constellation.id, constellation.group);
 
     return NextResponse.json({
       satellites,
       count: satellites.length,
       constellationId: constellation.id,
-      cached,
-      fetchedAt: new Date().toISOString(),
     });
   } catch (error) {
     const message =

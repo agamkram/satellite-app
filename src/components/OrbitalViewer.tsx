@@ -16,9 +16,9 @@ import { ConstellationLegend } from "./ConstellationLegend";
 import { OrbitalScene } from "./OrbitalScene";
 import { TimeControls } from "./TimeControls";
 
-function getInitialVisibility() {
-  return Object.fromEntries(CONSTELLATIONS.map((constellation) => [constellation.id, true]));
-}
+const INITIAL_VISIBILITY = Object.fromEntries(
+  CONSTELLATIONS.map((constellation) => [constellation.id, true]),
+);
 
 export function OrbitalViewer() {
   const [satellites, setSatellites] = useState<SatelliteRecord[]>([]);
@@ -29,7 +29,7 @@ export function OrbitalViewer() {
   const [speed, setSpeed] = useState(1);
   const [offsetHours, setOffsetHours] = useState(0);
   const [simTime, setSimTime] = useState(() => Date.now());
-  const [visibleConstellations, setVisibleConstellations] = useState(getInitialVisibility);
+  const [visibleConstellations, setVisibleConstellations] = useState(INITIAL_VISIBILITY);
   const [legendOpen, setLegendOpen] = useState(false);
 
   const baseTimeRef = useRef(Date.now());
@@ -41,7 +41,6 @@ export function OrbitalViewer() {
   const scrubUiFrameRef = useRef<number | null>(null);
 
   speedRef.current = speed;
-  offsetHoursRef.current = offsetHours;
 
   const syncSimTime = useCallback((hours: number) => {
     offsetHoursRef.current = hours;
@@ -219,7 +218,6 @@ export function OrbitalViewer() {
       </div>
 
       <ConstellationLegend
-        constellations={CONSTELLATIONS}
         counts={counts}
         visibleConstellations={visibleConstellations}
         open={legendOpen}
