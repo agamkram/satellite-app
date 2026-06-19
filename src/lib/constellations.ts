@@ -3,7 +3,6 @@ export interface Constellation {
   name: string;
   color: string;
   group: string;
-  defaultVisible: boolean;
 }
 
 export const CONSTELLATIONS: Constellation[] = [
@@ -12,49 +11,54 @@ export const CONSTELLATIONS: Constellation[] = [
     name: "Space Stations",
     color: "#ffffff",
     group: "stations",
-    defaultVisible: true,
   },
   {
     id: "starlink",
     name: "Starlink",
     color: "#ff6b6b",
     group: "starlink",
-    defaultVisible: true,
   },
   {
     id: "gps",
     name: "GPS",
     color: "#4dabf7",
     group: "gps-ops",
-    defaultVisible: true,
   },
   {
     id: "oneweb",
     name: "OneWeb",
     color: "#51cf66",
     group: "oneweb",
-    defaultVisible: true,
+  },
+  {
+    id: "iridium",
+    name: "Iridium NEXT",
+    color: "#748ffc",
+    group: "iridium-NEXT",
+  },
+  {
+    id: "kuiper",
+    name: "Kuiper",
+    color: "#146eb4",
+    group: "kuiper",
   },
   {
     id: "galileo",
     name: "Galileo",
     color: "#ffd43b",
     group: "galileo",
-    defaultVisible: true,
   },
   {
     id: "glo",
     name: "GLONASS",
     color: "#da77f2",
     group: "glo-ops",
-    defaultVisible: true,
   },
   {
     id: "beidou",
     name: "BeiDou",
     color: "#ff922b",
     group: "beidou",
-    defaultVisible: true,
   },
 ];
 

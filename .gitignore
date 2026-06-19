@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 .npm-cache
+.celestrak-cache
 *.pem
 
 # debug

@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CONSTELLATIONS } from "@/lib/constellations";
+import { HOUR_MS } from "@/lib/playback-speed";
 import {
-  deserializeSatellite,
+  computeFitCameraDistance,
+  computeMaxOrbitalRadiusScene,
+  DEFAULT_MAX_CAMERA_DISTANCE,
+  parseOmmRecord,
   SatelliteRecord,
   SerializedSatellite,
 } from "@/lib/satellite-math";
@@ -12,15 +16,8 @@ import { ConstellationLegend } from "./ConstellationLegend";
 import { OrbitalScene } from "./OrbitalScene";
 import { TimeControls } from "./TimeControls";
 
-const HOUR_MS = 60 * 60 * 1000;
-
 function getInitialVisibility() {
-  return Object.fromEntries(
-    CONSTELLATIONS.map((constellation) => [
-      constellation.id,
-      constellation.defaultVisible,
-    ]),
-  );
+  return Object.fromEntries(CONSTELLATIONS.map((constellation) => [constellation.id, true]));
 }
 
 export function OrbitalViewer() {
@@ -28,25 +25,38 @@ export function OrbitalViewer() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(300);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [speed, setSpeed] = useState(1);
   const [offsetHours, setOffsetHours] = useState(0);
-  const [displayTime, setDisplayTime] = useState(() => Date.now());
+  const [simTime, setSimTime] = useState(() => Date.now());
   const [visibleConstellations, setVisibleConstellations] = useState(getInitialVisibility);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   const baseTimeRef = useRef(Date.now());
   const simTimeRef = useRef(Date.now());
+  const offsetHoursRef = useRef(0);
+  const speedRef = useRef(speed);
+
+  speedRef.current = speed;
+  offsetHoursRef.current = offsetHours;
 
   const syncSimTime = useCallback((hours: number) => {
+    offsetHoursRef.current = hours;
     simTimeRef.current = baseTimeRef.current + hours * HOUR_MS;
-    return simTimeRef.current;
+    setSimTime(simTimeRef.current);
   }, []);
 
-  const simTime = useMemo(
-    () => baseTimeRef.current + offsetHours * HOUR_MS,
-    // displayTime drives recomputation while playing without thrashing React each frame
-    [offsetHours, displayTime, syncSimTime],
-  );
+  const handleUiUpdate = useCallback((hours: number) => {
+    setOffsetHours(hours);
+    setSimTime(simTimeRef.current);
+  }, []);
+
+  const maxCameraDistance = useMemo(() => {
+    if (satellites.length === 0) return DEFAULT_MAX_CAMERA_DISTANCE;
+
+    const maxOrbitalRadius = computeMaxOrbitalRadiusScene(satellites);
+    return computeFitCameraDistance(maxOrbitalRadius);
+  }, [satellites]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,15 +65,26 @@ export function OrbitalViewer() {
       try {
         setLoading(true);
         setError(null);
+        setWarning(null);
 
-        const responses = await Promise.all(
+        const results = await Promise.allSettled(
           CONSTELLATIONS.map(async (constellation) => {
             const response = await fetch(`/api/satellites?group=${constellation.id}`);
-            const payload = (await response.json()) as {
+            const raw = await response.text();
+
+            let payload: {
               satellites: SerializedSatellite[];
               count: number;
               error?: string;
             };
+
+            try {
+              payload = JSON.parse(raw) as typeof payload;
+            } catch {
+              throw new Error(
+                "Server not ready yet. Wait a few seconds, then refresh the page.",
+              );
+            }
 
             if (!response.ok) {
               throw new Error(payload.error ?? `Failed to load ${constellation.name}`);
@@ -79,9 +100,26 @@ export function OrbitalViewer() {
 
         if (cancelled) return;
 
+        const responses = results.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : [],
+        );
+        const failures = results
+          .map((result, index) =>
+            result.status === "rejected"
+              ? `${CONSTELLATIONS[index].name}: ${
+                  result.reason instanceof Error ? result.reason.message : "failed"
+                }`
+              : null,
+          )
+          .filter((message): message is string => message !== null);
+
+        if (responses.length === 0) {
+          throw new Error(failures[0] ?? "Failed to load satellites");
+        }
+
         const parsed = responses
           .flatMap((result) => result.satellites)
-          .map(deserializeSatellite)
+          .map((satellite) => parseOmmRecord(satellite.omm, satellite.constellationId))
           .filter((satellite): satellite is SatelliteRecord => satellite !== null);
 
         const nextCounts = Object.fromEntries(
@@ -90,6 +128,10 @@ export function OrbitalViewer() {
 
         setSatellites(parsed);
         setCounts(nextCounts);
+
+        if (failures.length > 0) {
+          setWarning(`Some groups could not be loaded: ${failures.join("; ")}`);
+        }
       } catch (fetchError) {
         if (cancelled) return;
         const message =
@@ -107,47 +149,19 @@ export function OrbitalViewer() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!playing) return;
-
-    let frame = 0;
-    let last = performance.now();
-
-    const tick = (now: number) => {
-      const deltaMs = now - last;
-      last = now;
-
-      setOffsetHours((current) => {
-        const next = current + (deltaMs / HOUR_MS) * speed;
-        simTimeRef.current = baseTimeRef.current + next * HOUR_MS;
-        return next;
-      });
-      setDisplayTime(Date.now());
-
-      frame = window.requestAnimationFrame(tick);
-    };
-
-    frame = window.requestAnimationFrame(tick);
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [playing, speed]);
-
   const handleOffsetChange = useCallback(
     (hours: number) => {
-      setPlaying(false);
+      baseTimeRef.current = Date.now();
       syncSimTime(hours);
       setOffsetHours(hours);
-      setDisplayTime(Date.now());
     },
     [syncSimTime],
   );
 
   const handleReset = useCallback(() => {
-    setPlaying(false);
     baseTimeRef.current = Date.now();
     syncSimTime(0);
     setOffsetHours(0);
-    setDisplayTime(Date.now());
   }, [syncSimTime]);
 
   const toggleConstellation = useCallback((id: string) => {
@@ -157,64 +171,45 @@ export function OrbitalViewer() {
     }));
   }, []);
 
-  const totalVisible = useMemo(() => {
-    return satellites.filter(
-      (satellite) => visibleConstellations[satellite.constellationId],
-    ).length;
-  }, [satellites, visibleConstellations]);
-
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#02040a] text-white">
       <div className="absolute inset-0">
-        {!loading && !error ? (
+        {!loading && satellites.length > 0 ? (
           <OrbitalScene
             satellites={satellites}
             visibleConstellations={visibleConstellations}
+            speedRef={speedRef}
+            baseTimeRef={baseTimeRef}
+            offsetHoursRef={offsetHoursRef}
             simTimeRef={simTimeRef}
+            onUiUpdate={handleUiUpdate}
+            maxCameraDistance={maxCameraDistance}
           />
         ) : null}
       </div>
 
-      <div className="pointer-events-none relative z-10 flex h-full flex-col">
-        <header className="pointer-events-none flex items-start justify-between gap-3 p-3 sm:p-5">
-          <div className="pointer-events-auto max-w-xl rounded-2xl border border-white/10 bg-black/55 px-4 py-3 backdrop-blur-md">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sky-300/90">
-              Orbital View
-            </p>
-            <h1 className="mt-1 text-lg font-semibold sm:text-xl">
-              Live satellites around Earth
-            </h1>
-            <p className="mt-1 text-xs text-white/55 sm:text-sm">
-              NORAD TLE data via CelesTrak. Drag to orbit, pinch to zoom, scrub time
-              ±24 hours.
-            </p>
+      <ConstellationLegend
+        constellations={CONSTELLATIONS}
+        counts={counts}
+        visibleConstellations={visibleConstellations}
+        open={legendOpen}
+        onOpenChange={setLegendOpen}
+        onToggle={toggleConstellation}
+      />
+
+      <div className="pointer-events-none absolute inset-0 z-10">
+        {warning ? (
+          <div className="pointer-events-auto absolute left-1/2 top-3 z-30 max-w-md -translate-x-1/2 rounded-full border border-amber-400/25 bg-amber-950/80 px-3 py-1.5 text-center text-xs text-amber-100">
+            {warning}
           </div>
+        ) : null}
 
-          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/55 px-3 py-2 text-right backdrop-blur-md">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">Visible</p>
-            <p className="font-mono text-sm text-white/90">
-              {loading ? "…" : totalVisible.toLocaleString()}
-            </p>
-          </div>
-        </header>
-
-        <div className="flex-1" />
-
-        <div className="pointer-events-none grid gap-3 p-3 sm:grid-cols-[minmax(0,280px)_minmax(0,1fr)] sm:p-5">
-          <ConstellationLegend
-            constellations={CONSTELLATIONS}
-            counts={counts}
-            visibleConstellations={visibleConstellations}
-            onToggle={toggleConstellation}
-          />
-
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent">
           <TimeControls
             simTime={simTime}
             offsetHours={offsetHours}
-            playing={playing}
             speed={speed}
             onOffsetChange={handleOffsetChange}
-            onPlayingChange={setPlaying}
             onSpeedChange={setSpeed}
             onReset={handleReset}
           />

@@ -1,80 +1,73 @@
 "use client";
 
-import { OrbitControls, Stars } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useMemo } from "react";
 
-import { CONSTELLATION_BY_ID } from "@/lib/constellations";
-import { SatelliteRecord } from "@/lib/satellite-math";
-import { ConstellationInstances } from "./ConstellationInstances";
+import {
+  CAMERA_FOV,
+  CAMERA_MIN_DISTANCE,
+  SatelliteRecord,
+} from "@/lib/satellite-math";
 import { Earth } from "./Earth";
+import { SatelliteField } from "./SatelliteField";
+import { SceneClock } from "./SceneClock";
+import { Starfield } from "./Starfield";
 
 interface OrbitalSceneProps {
   satellites: SatelliteRecord[];
   visibleConstellations: Record<string, boolean>;
+  speedRef: React.RefObject<number>;
+  baseTimeRef: React.RefObject<number>;
+  offsetHoursRef: React.RefObject<number>;
   simTimeRef: React.RefObject<number>;
+  onUiUpdate: (offsetHours: number) => void;
+  maxCameraDistance: number;
 }
 
-function SceneContent({
+export function OrbitalScene({
   satellites,
   visibleConstellations,
+  speedRef,
+  baseTimeRef,
+  offsetHoursRef,
   simTimeRef,
+  onUiUpdate,
+  maxCameraDistance,
 }: OrbitalSceneProps) {
-  const groupedSatellites = useMemo(() => {
-    const groups: Record<string, SatelliteRecord[]> = {};
-
-    for (const satellite of satellites) {
-      if (!groups[satellite.constellationId]) {
-        groups[satellite.constellationId] = [];
-      }
-      groups[satellite.constellationId].push(satellite);
-    }
-
-    return groups;
-  }, [satellites]);
-
   return (
-    <>
+    <Canvas
+      frameloop="always"
+      camera={{ position: [0, 0, 6], fov: CAMERA_FOV, near: 0.1, far: 200 }}
+      dpr={[1, 1.5]}
+      gl={{ antialias: true, powerPreference: "high-performance" }}
+      style={{ touchAction: "none" }}
+    >
+      <SceneClock
+        speedRef={speedRef}
+        baseTimeRef={baseTimeRef}
+        offsetHoursRef={offsetHoursRef}
+        simTimeRef={simTimeRef}
+        onUiUpdate={onUiUpdate}
+      />
       <ambientLight intensity={0.35} />
       <directionalLight position={[8, 4, 2]} intensity={1.4} />
-      <Stars radius={120} depth={60} count={5000} factor={3} fade speed={0.2} />
+      <Starfield />
       <Earth />
-      {Object.entries(groupedSatellites).map(([constellationId, constellationSats]) => {
-        const constellation = CONSTELLATION_BY_ID[constellationId];
-        if (!constellation) return null;
-
-        return (
-          <ConstellationInstances
-            key={constellationId}
-            satellites={constellationSats}
-            color={constellation.color}
-            visible={visibleConstellations[constellationId] ?? true}
-            simTimeRef={simTimeRef}
-          />
-        );
-      })}
+      <SatelliteField
+        satellites={satellites}
+        visibleConstellations={visibleConstellations}
+        simTimeRef={simTimeRef}
+        maxCameraDistance={maxCameraDistance}
+      />
       <OrbitControls
         enablePan={false}
-        minDistance={2.6}
-        maxDistance={18}
+        minDistance={CAMERA_MIN_DISTANCE}
+        maxDistance={maxCameraDistance}
         rotateSpeed={0.45}
         zoomSpeed={0.7}
         enableDamping
         dampingFactor={0.08}
       />
-    </>
-  );
-}
-
-export function OrbitalScene(props: OrbitalSceneProps) {
-  return (
-    <Canvas
-      camera={{ position: [0, 0, 6], fov: 45, near: 0.1, far: 200 }}
-      dpr={[1, 1.75]}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
-      style={{ touchAction: "none" }}
-    >
-      <SceneContent {...props} />
     </Canvas>
   );
 }
