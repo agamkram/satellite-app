@@ -36,6 +36,9 @@ export function OrbitalViewer() {
   const simTimeRef = useRef(Date.now());
   const offsetHoursRef = useRef(0);
   const speedRef = useRef(speed);
+  const scrubbingRef = useRef(false);
+  const scrubAnchorRef = useRef<number | null>(null);
+  const scrubUiFrameRef = useRef<number | null>(null);
 
   speedRef.current = speed;
   offsetHoursRef.current = offsetHours;
@@ -149,8 +152,34 @@ export function OrbitalViewer() {
     };
   }, []);
 
-  const handleOffsetChange = useCallback(
+  const handleScrubStart = useCallback(() => {
+    scrubbingRef.current = true;
+    scrubAnchorRef.current = Date.now();
+  }, []);
+
+  const handleScrubChange = useCallback((hours: number) => {
+    const anchor = scrubAnchorRef.current ?? Date.now();
+    offsetHoursRef.current = hours;
+    simTimeRef.current = anchor + hours * HOUR_MS;
+    setOffsetHours(hours);
+
+    if (scrubUiFrameRef.current === null) {
+      scrubUiFrameRef.current = requestAnimationFrame(() => {
+        setSimTime(simTimeRef.current);
+        scrubUiFrameRef.current = null;
+      });
+    }
+  }, []);
+
+  const handleScrubEnd = useCallback(
     (hours: number) => {
+      if (scrubUiFrameRef.current !== null) {
+        cancelAnimationFrame(scrubUiFrameRef.current);
+        scrubUiFrameRef.current = null;
+      }
+
+      scrubbingRef.current = false;
+      scrubAnchorRef.current = null;
       baseTimeRef.current = Date.now();
       syncSimTime(hours);
       setOffsetHours(hours);
@@ -182,6 +211,7 @@ export function OrbitalViewer() {
             baseTimeRef={baseTimeRef}
             offsetHoursRef={offsetHoursRef}
             simTimeRef={simTimeRef}
+            scrubbingRef={scrubbingRef}
             onUiUpdate={handleUiUpdate}
             maxCameraDistance={maxCameraDistance}
           />
@@ -209,7 +239,9 @@ export function OrbitalViewer() {
             simTime={simTime}
             offsetHours={offsetHours}
             speed={speed}
-            onOffsetChange={handleOffsetChange}
+            onScrubStart={handleScrubStart}
+            onScrubChange={handleScrubChange}
+            onScrubEnd={handleScrubEnd}
             onSpeedChange={setSpeed}
             onReset={handleReset}
           />

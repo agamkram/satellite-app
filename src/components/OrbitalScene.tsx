@@ -20,6 +20,7 @@ interface OrbitalSceneProps {
   baseTimeRef: React.RefObject<number>;
   offsetHoursRef: React.RefObject<number>;
   simTimeRef: React.RefObject<number>;
+  scrubbingRef: React.RefObject<boolean>;
   onUiUpdate: (offsetHours: number) => void;
   maxCameraDistance: number;
 }
@@ -31,6 +32,7 @@ export function OrbitalScene({
   baseTimeRef,
   offsetHoursRef,
   simTimeRef,
+  scrubbingRef,
   onUiUpdate,
   maxCameraDistance,
 }: OrbitalSceneProps) {
@@ -47,6 +49,7 @@ export function OrbitalScene({
         baseTimeRef={baseTimeRef}
         offsetHoursRef={offsetHoursRef}
         simTimeRef={simTimeRef}
+        scrubbingRef={scrubbingRef}
         onUiUpdate={onUiUpdate}
       />
       <ambientLight intensity={0.35} />
@@ -57,6 +60,7 @@ export function OrbitalScene({
         satellites={satellites}
         visibleConstellations={visibleConstellations}
         simTimeRef={simTimeRef}
+        scrubbingRef={scrubbingRef}
         maxCameraDistance={maxCameraDistance}
       />
       <OrbitControls

@@ -12,6 +12,7 @@ interface SceneClockProps {
   baseTimeRef: React.RefObject<number>;
   offsetHoursRef: React.RefObject<number>;
   simTimeRef: React.RefObject<number>;
+  scrubbingRef: React.RefObject<boolean>;
   onUiUpdate: (offsetHours: number) => void;
 }
 
@@ -20,11 +21,14 @@ export function SceneClock({
   baseTimeRef,
   offsetHoursRef,
   simTimeRef,
+  scrubbingRef,
   onUiUpdate,
 }: SceneClockProps) {
   const lastUiUpdateRef = useRef(0);
 
   useFrame((_, delta) => {
+    if (scrubbingRef.current) return;
+
     const deltaMs = Math.min(delta * 1000, 50);
     const nextOffset = offsetHoursRef.current + (deltaMs / HOUR_MS) * speedRef.current;
 

@@ -18,6 +18,7 @@ import {
 } from "@/lib/satellite-point-size";
 
 const PROPAGATE_INTERVAL_MS = 50;
+const SNAP_TIME_JUMP_MS = 5_000;
 const DEFAULT_CAMERA_DISTANCE = 6;
 
 interface RenderGroup {
@@ -35,6 +36,7 @@ interface SatelliteFieldProps {
   satellites: SatelliteRecord[];
   visibleConstellations: Record<string, boolean>;
   simTimeRef: React.RefObject<number>;
+  scrubbingRef: React.RefObject<boolean>;
   maxCameraDistance: number;
 }
 
@@ -80,6 +82,7 @@ export function SatelliteField({
   satellites,
   visibleConstellations,
   simTimeRef,
+  scrubbingRef,
   maxCameraDistance,
 }: SatelliteFieldProps) {
   const pointTexture = useMemo(() => getSatellitePointTexture(), []);
@@ -137,18 +140,22 @@ export function SatelliteField({
     const cameraDistance = camera.position.length();
     const now = performance.now();
     const simTimeChanged = simTime !== lastSimTimeRef.current;
+    const timeJumpMs = Math.abs(simTime - lastSimTimeRef.current);
+    const isScrubbing = scrubbingRef.current;
+    const shouldSnap = isScrubbing || timeJumpMs >= SNAP_TIME_JUMP_MS;
     const shouldPropagate =
       simTimeChanged &&
-      (blendRef.current >= 1 || now - lastPropagateRef.current >= PROPAGATE_INTERVAL_MS);
+      (shouldSnap || blendRef.current >= 1 || now - lastPropagateRef.current >= PROPAGATE_INTERVAL_MS);
 
     if (shouldPropagate) {
       lastPropagateRef.current = now;
       lastSimTimeRef.current = simTime;
-      blendRef.current = 0;
       propagateDateRef.current.setTime(simTime);
 
       for (const group of activeGroups) {
-        group.previous.set(group.target);
+        if (!shouldSnap) {
+          group.previous.set(group.target);
+        }
         for (let i = 0; i < group.satellites.length; i += 1) {
           writeSatellitePosition(
             group.satellites[i].satrec,
@@ -157,10 +164,16 @@ export function SatelliteField({
             i,
           );
         }
+        if (shouldSnap) {
+          group.previous.set(group.target);
+          group.display.set(group.target);
+        }
       }
+
+      blendRef.current = shouldSnap ? 1 : 0;
     }
 
-    if (blendRef.current < 1) {
+    if (!shouldSnap && blendRef.current < 1) {
       blendRef.current = Math.min(1, blendRef.current + delta / (PROPAGATE_INTERVAL_MS / 1000));
     }
 

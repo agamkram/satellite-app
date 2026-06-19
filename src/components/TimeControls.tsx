@@ -11,7 +11,9 @@ interface TimeControlsProps {
   simTime: number;
   offsetHours: number;
   speed: number;
-  onOffsetChange: (hours: number) => void;
+  onScrubStart: () => void;
+  onScrubChange: (hours: number) => void;
+  onScrubEnd: (hours: number) => void;
   onSpeedChange: (speed: number) => void;
   onReset: () => void;
 }
@@ -32,7 +34,9 @@ export function TimeControls({
   simTime,
   offsetHours,
   speed,
-  onOffsetChange,
+  onScrubStart,
+  onScrubChange,
+  onScrubEnd,
   onSpeedChange,
   onReset,
 }: TimeControlsProps) {
@@ -53,9 +57,12 @@ export function TimeControls({
           type="range"
           min={-12}
           max={12}
-          step={0.25}
+          step="any"
           value={offsetHours}
-          onChange={(event) => onOffsetChange(Number(event.target.value))}
+          onPointerDown={onScrubStart}
+          onPointerUp={(event) => onScrubEnd(Number(event.currentTarget.value))}
+          onPointerCancel={(event) => onScrubEnd(Number(event.currentTarget.value))}
+          onInput={(event) => onScrubChange(Number(event.currentTarget.value))}
           className="time-slider w-full"
           aria-label="Time offset in hours"
         />
