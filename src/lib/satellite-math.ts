@@ -109,9 +109,13 @@ export function computeFitCameraDistance(
   maxOrbitalRadius: number,
   fovDeg = CAMERA_FOV,
   padding = 1.15,
+  aspect = 1,
 ): number {
-  const halfFovRad = (fovDeg / 2) * (Math.PI / 180);
-  const fitDistance = (maxOrbitalRadius / Math.tan(halfFovRad)) * padding;
+  const halfVFovRad = (fovDeg / 2) * (Math.PI / 180);
+  const halfHFovRad = Math.atan(Math.tan(halfVFovRad) * Math.max(aspect, 0.1));
+  const verticalFit = maxOrbitalRadius / Math.tan(halfVFovRad);
+  const horizontalFit = maxOrbitalRadius / Math.tan(halfHFovRad);
+  const fitDistance = Math.max(verticalFit, horizontalFit) * padding;
 
   return Math.max(CAMERA_MIN_DISTANCE + 1, fitDistance);
 }

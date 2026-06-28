@@ -53,12 +53,48 @@ export function OrbitalViewer() {
     setSimTime(simTimeRef.current);
   }, []);
 
-  const maxCameraDistance = useMemo(() => {
-    if (satellites.length === 0) return DEFAULT_MAX_CAMERA_DISTANCE;
+  const [viewportAspect, setViewportAspect] = useState(() =>
+    typeof window === "undefined" ? 1 : window.innerWidth / window.innerHeight,
+  );
+
+  useEffect(() => {
+    const updateAspect = () => {
+      setViewportAspect(window.innerWidth / window.innerHeight);
+    };
+
+    updateAspect();
+    window.addEventListener("resize", updateAspect);
+    window.visualViewport?.addEventListener("resize", updateAspect);
+
+    return () => {
+      window.removeEventListener("resize", updateAspect);
+      window.visualViewport?.removeEventListener("resize", updateAspect);
+    };
+  }, []);
+
+  const { fitCameraDistance, maxCameraDistance } = useMemo(() => {
+    if (satellites.length === 0) {
+      return {
+        fitCameraDistance: 6,
+        maxCameraDistance: DEFAULT_MAX_CAMERA_DISTANCE,
+      };
+    }
 
     const maxOrbitalRadius = computeMaxOrbitalRadiusScene(satellites);
-    return computeFitCameraDistance(maxOrbitalRadius);
-  }, [satellites]);
+    const isPortrait = viewportAspect < 1;
+    const padding = isPortrait ? 1.22 : 1.15;
+    const fit = computeFitCameraDistance(
+      maxOrbitalRadius,
+      undefined,
+      padding,
+      viewportAspect,
+    );
+
+    return {
+      fitCameraDistance: fit,
+      maxCameraDistance: Math.max(fit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
+    };
+  }, [satellites, viewportAspect]);
 
   useEffect(() => {
     let cancelled = false;
@@ -212,6 +248,7 @@ export function OrbitalViewer() {
             simTimeRef={simTimeRef}
             scrubbingRef={scrubbingRef}
             onUiUpdate={handleUiUpdate}
+            fitCameraDistance={fitCameraDistance}
             maxCameraDistance={maxCameraDistance}
           />
         ) : null}

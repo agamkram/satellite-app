@@ -8,6 +8,7 @@ import {
   CAMERA_MIN_DISTANCE,
   SatelliteRecord,
 } from "@/lib/satellite-math";
+import { CameraFit } from "./CameraFit";
 import { Earth } from "./Earth";
 import { SatelliteField } from "./SatelliteField";
 import { SceneClock } from "./SceneClock";
@@ -22,6 +23,7 @@ interface OrbitalSceneProps {
   simTimeRef: React.RefObject<number>;
   scrubbingRef: React.RefObject<boolean>;
   onUiUpdate: (offsetHours: number) => void;
+  fitCameraDistance: number;
   maxCameraDistance: number;
 }
 
@@ -34,16 +36,18 @@ export function OrbitalScene({
   simTimeRef,
   scrubbingRef,
   onUiUpdate,
+  fitCameraDistance,
   maxCameraDistance,
 }: OrbitalSceneProps) {
   return (
     <Canvas
       frameloop="always"
-      camera={{ position: [0, 0, 6], fov: CAMERA_FOV, near: 0.1, far: 200 }}
+      camera={{ position: [0, 0, fitCameraDistance], fov: CAMERA_FOV, near: 0.1, far: 200 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ touchAction: "none" }}
     >
+      <CameraFit distance={fitCameraDistance} />
       <SceneClock
         speedRef={speedRef}
         baseTimeRef={baseTimeRef}
