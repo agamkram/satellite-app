@@ -40,7 +40,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-dvh max-h-dvh overflow-hidden bg-[#02040a] font-sans text-white">
+      <body className="min-h-full overflow-hidden bg-[#02040a] font-sans text-white">
         {children}
       </body>
     </html>
