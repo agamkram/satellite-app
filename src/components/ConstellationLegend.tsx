@@ -89,7 +89,7 @@ export function ConstellationLegend({
         <div
           id="ov-constellation-panel"
           style={{ ...fixedStyle, top: edgeInset.panelTop }}
-          className="pointer-events-auto max-h-[min(50dvh,320px)] w-[min(240px,calc(100vw-1.5rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/55 p-2 backdrop-blur-md"
+          className="pointer-events-auto max-h-[min(38dvh,240px)] w-[min(240px,calc(100vw-1.5rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/55 p-2 backdrop-blur-md tall:max-h-[min(32dvh,200px)]"
         >
           <ul className="space-y-1">
             {sortedConstellations.map((constellation) => {
