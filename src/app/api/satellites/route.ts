@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CONSTELLATION_BY_ID } from "@/lib/constellations";
 import {
   isCacheFresh,
+  readBundledGroupFallback,
   readBundledStarlinkFallback,
   readCachedGroup,
   writeCachedGroup,
@@ -36,7 +37,12 @@ async function downloadGroup(group: string): Promise<OmmRecord[]> {
     },
   });
 
-  if (response.status === 403) {
+  if (
+    response.status === 403 ||
+    response.status === 429 ||
+    response.status === 502 ||
+    response.status === 503
+  ) {
     return [];
   }
 
@@ -86,7 +92,12 @@ async function fetchConstellation(
     return cached.satellites;
   }
 
-  const records = await downloadGroup(group);
+  let records: OmmRecord[] = [];
+  try {
+    records = await downloadGroup(group);
+  } catch {
+    records = [];
+  }
 
   if (records.length === 0) {
     if (group === "starlink") {
@@ -95,6 +106,12 @@ async function fetchConstellation(
 
     if (cached) {
       return cached.satellites;
+    }
+
+    const bundled = await readBundledGroupFallback(group);
+    if (bundled) {
+      await writeCachedGroup(group, bundled);
+      return bundled;
     }
 
     throw new Error(

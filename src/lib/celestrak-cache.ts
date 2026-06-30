@@ -73,19 +73,24 @@ export function isCacheFresh(entry: CacheEntry) {
   return age < CACHE_TTL_MS;
 }
 
-const BUNDLED_STARLINK_PATH = path.join(
-  process.cwd(),
-  "public",
-  "data",
-  "starlink-fallback.json",
-);
+const BUNDLED_DATA_DIR = path.join(process.cwd(), "public", "data");
 
-export async function readBundledStarlinkFallback(): Promise<SerializedSatellite[] | null> {
+function bundledFallbackPath(group: string) {
+  return path.join(BUNDLED_DATA_DIR, `${cacheKey(group)}-fallback.json`);
+}
+
+export async function readBundledGroupFallback(
+  group: string,
+): Promise<SerializedSatellite[] | null> {
   try {
-    const raw = await fs.readFile(BUNDLED_STARLINK_PATH, "utf8");
+    const raw = await fs.readFile(bundledFallbackPath(group), "utf8");
     const payload = JSON.parse(raw) as CacheEntry;
     return payload.satellites;
   } catch {
     return null;
   }
+}
+
+export async function readBundledStarlinkFallback(): Promise<SerializedSatellite[] | null> {
+  return readBundledGroupFallback("starlink");
 }
