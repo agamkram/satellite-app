@@ -6,7 +6,8 @@ import { createPortal } from "react-dom";
 import { CONSTELLATIONS } from "@/lib/constellations";
 import {
   isPortraitPhone,
-  measurePortraitDockTop,
+  measurePortraitDockLayout,
+  type PortraitDockLayout,
 } from "@/lib/ios-home-screen";
 import { HOUR_MS } from "@/lib/playback-speed";
 import {
@@ -63,7 +64,9 @@ export function OrbitalViewer() {
   );
   const [uiMounted, setUiMounted] = useState(false);
   const [portraitPhone, setPortraitPhone] = useState(false);
-  const [portraitDockTop, setPortraitDockTop] = useState<number | null>(null);
+  const [portraitDockLayout, setPortraitDockLayout] = useState<PortraitDockLayout | null>(
+    null,
+  );
   const portraitDockRef = useRef<HTMLDivElement>(null);
 
   const updatePortraitDock = useCallback(() => {
@@ -71,12 +74,12 @@ export function OrbitalViewer() {
     setPortraitPhone(portrait);
 
     if (!portrait || !portraitDockRef.current) {
-      setPortraitDockTop(null);
+      setPortraitDockLayout(null);
       return;
     }
 
     const dockHeight = portraitDockRef.current.offsetHeight;
-    setPortraitDockTop(measurePortraitDockTop(dockHeight));
+    setPortraitDockLayout(measurePortraitDockLayout(dockHeight));
   }, []);
 
   useEffect(() => {
@@ -92,12 +95,14 @@ export function OrbitalViewer() {
     window.addEventListener("orientationchange", updateViewport);
     window.visualViewport?.addEventListener("resize", updateViewport);
     window.visualViewport?.addEventListener("scroll", updateViewport);
+    window.addEventListener("pageshow", updateViewport);
 
     return () => {
       window.removeEventListener("resize", updateViewport);
       window.removeEventListener("orientationchange", updateViewport);
       window.visualViewport?.removeEventListener("resize", updateViewport);
       window.visualViewport?.removeEventListener("scroll", updateViewport);
+      window.removeEventListener("pageshow", updateViewport);
     };
   }, [updatePortraitDock]);
 
@@ -297,12 +302,17 @@ export function OrbitalViewer() {
     </div>
   );
 
+  const portraitDockStyle =
+    portraitDockLayout?.mode === "top"
+      ? { top: portraitDockLayout.top, bottom: "auto" as const }
+      : { bottom: 0, top: "auto" as const };
+
   const portraitTimeControlsDock = (
     <div
       id="ov-time-dock"
       ref={portraitDockRef}
       className="time-controls-gradient pointer-events-none fixed inset-x-0 z-[10000] bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
-      style={portraitDockTop !== null ? { top: portraitDockTop } : { bottom: 0 }}
+      style={portraitDockStyle}
     >
       <TimeControls {...timeControlProps} />
     </div>
@@ -310,9 +320,7 @@ export function OrbitalViewer() {
 
   return (
     <div
-      className={`relative w-full overflow-hidden bg-[#02040a] text-white ${
-        portraitPhone ? "h-svh" : "h-dvh"
-      }`}
+      className="relative h-dvh w-full overflow-hidden bg-[#02040a] text-white"
     >
       <div className="absolute inset-0">
         {!loading && satellites.length > 0 ? (

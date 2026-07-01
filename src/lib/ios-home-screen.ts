@@ -21,13 +21,20 @@ function getInsetProbe(): HTMLDivElement {
   return insetProbe;
 }
 
-function readEnvInset(property: "top" | "right"): number {
+function readEnvInset(property: "top" | "right" | "bottom"): number {
   const probe = getInsetProbe();
   probe.style.paddingTop = property === "top" ? "env(safe-area-inset-top)" : "0px";
   probe.style.paddingRight = property === "right" ? "env(safe-area-inset-right)" : "0px";
+  probe.style.paddingBottom = property === "bottom" ? "env(safe-area-inset-bottom)" : "0px";
 
   const style = getComputedStyle(probe);
-  return parseFloat(property === "top" ? style.paddingTop : style.paddingRight) || 0;
+  const value =
+    property === "top"
+      ? style.paddingTop
+      : property === "right"
+        ? style.paddingRight
+        : style.paddingBottom;
+  return parseFloat(value) || 0;
 }
 
 function fallbackSafeAreaTop(): number {
@@ -55,12 +62,25 @@ export function isPortraitPhone(): boolean {
   return window.innerWidth < 768 && window.innerHeight > window.innerWidth;
 }
 
-export function measurePortraitDockTop(dockHeight: number): number {
-  if (typeof window === "undefined") return 0;
+export type PortraitDockLayout =
+  | { mode: "bottom" }
+  | { mode: "top"; top: number };
+
+export function measurePortraitDockLayout(dockHeight: number): PortraitDockLayout {
+  if (typeof window === "undefined") return { mode: "bottom" };
+
+  // Home-screen apps paint the full display; visualViewport.height is often
+  // shorter than innerHeight and leaves the dock floating too high.
+  if (isIosHomeScreen()) {
+    return { mode: "bottom" };
+  }
 
   const vv = window.visualViewport;
   const visibleTop = vv?.offsetTop ?? 0;
   const visibleHeight = vv?.height ?? window.innerHeight;
 
-  return Math.max(0, visibleTop + visibleHeight - dockHeight);
+  return {
+    mode: "top",
+    top: Math.max(0, visibleTop + visibleHeight - dockHeight),
+  };
 }
