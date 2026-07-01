@@ -41,8 +41,8 @@ export function TimeControls({
   onReset,
 }: TimeControlsProps) {
   return (
-    <div className="pointer-events-auto w-full px-3 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 short-landscape:px-2 short-landscape:pb-1 short-landscape:pt-0.5 tall:px-5 tall:pt-2">
-      <div className="mx-auto max-w-3xl rounded-xl border border-white/10 bg-black/45 px-3 py-1.5 backdrop-blur-sm short-landscape:px-2 short-landscape:py-1 tall:py-2">
+    <div className="pointer-events-auto w-full px-3 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 phone-portrait:pt-0 phone-portrait:pb-[max(0.5rem,env(safe-area-inset-bottom))] short-landscape:px-2 short-landscape:pb-1 short-landscape:pt-0.5 tall:px-5 tall:pt-2">
+      <div className="mx-auto max-w-3xl rounded-xl border border-white/10 bg-black/45 px-3 py-1.5 backdrop-blur-sm phone-portrait:py-1 short-landscape:px-2 short-landscape:py-1 tall:py-2">
         <div className="mb-1 flex items-center justify-between gap-2 text-[10px] text-white/50 short-landscape:mb-0.5">
           <span suppressHydrationWarning className="font-mono text-white/75">
             {formatLocalTime(simTime)}

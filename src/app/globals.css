@@ -2,6 +2,7 @@
 
 @custom-variant tall (@media (min-width: 640px) and (min-height: 520px));
 @custom-variant short-landscape (@media (orientation: landscape) and (max-height: 500px));
+@custom-variant phone-portrait (@media (max-width: 767px) and (orientation: portrait));
 @custom-variant desktop (@media (min-width: 1024px) and (pointer: fine));
 
 :root {
