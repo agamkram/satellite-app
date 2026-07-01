@@ -7,6 +7,8 @@ import { CONSTELLATIONS } from "@/lib/constellations";
 import {
   isPortraitPhone,
   measurePortraitDockLayout,
+  readVisualViewportSize,
+  waitForStableViewport,
   type PortraitDockLayout,
 } from "@/lib/ios-home-screen";
 import { HOUR_MS } from "@/lib/playback-speed";
@@ -84,25 +86,39 @@ export function OrbitalViewer() {
 
   useEffect(() => {
     setUiMounted(true);
+    let layoutReady = false;
+    let layoutShownAt = 0;
+    let cancelled = false;
 
-    const updateViewport = () => {
+    const updateViewport = (force = false) => {
+      if (!force && layoutReady && performance.now() - layoutShownAt < 350) return;
       setViewportAspect(window.innerWidth / window.innerHeight);
       updatePortraitDock();
     };
 
-    updateViewport();
-    window.addEventListener("resize", updateViewport);
-    window.addEventListener("orientationchange", updateViewport);
-    window.visualViewport?.addEventListener("resize", updateViewport);
-    window.visualViewport?.addEventListener("scroll", updateViewport);
-    window.addEventListener("pageshow", updateViewport);
+    void (async () => {
+      await waitForStableViewport(readVisualViewportSize);
+      if (cancelled) return;
+      updateViewport(true);
+      layoutReady = true;
+      layoutShownAt = performance.now();
+    })();
+
+    const onResize = () => updateViewport();
+    const onOrientationChange = () => updateViewport(true);
+    const onPageShow = () => updateViewport(true);
+
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onOrientationChange);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.addEventListener("pageshow", onPageShow);
 
     return () => {
-      window.removeEventListener("resize", updateViewport);
-      window.removeEventListener("orientationchange", updateViewport);
-      window.visualViewport?.removeEventListener("resize", updateViewport);
-      window.visualViewport?.removeEventListener("scroll", updateViewport);
-      window.removeEventListener("pageshow", updateViewport);
+      cancelled = true;
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onOrientationChange);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, [updatePortraitDock]);
 

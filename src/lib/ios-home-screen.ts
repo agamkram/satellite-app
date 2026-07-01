@@ -66,6 +66,55 @@ export type PortraitDockLayout =
   | { mode: "bottom" }
   | { mode: "top"; top: number };
 
+export function waitForStableViewport(
+  readSize: () => { width: number; height: number },
+  options: { maxMs?: number; stableFrames?: number } = {}
+): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+
+  const maxMs = options.maxMs ?? 600;
+  const stableFrames = options.stableFrames ?? 4;
+  const start = performance.now();
+  let stable = 0;
+  let lastW = -1;
+  let lastH = -1;
+
+  return new Promise((resolve) => {
+    function tick() {
+      const { width, height } = readSize();
+
+      if (width > 0 && height > 0 && width === lastW && height === lastH) {
+        stable += 1;
+        if (stable >= stableFrames) {
+          resolve();
+          return;
+        }
+      } else {
+        stable = 0;
+        lastW = width;
+        lastH = height;
+      }
+
+      if (performance.now() - start >= maxMs) {
+        resolve();
+        return;
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
+  });
+}
+
+export function readVisualViewportSize(): { width: number; height: number } {
+  const vv = window.visualViewport;
+  return {
+    width: vv?.width ?? window.innerWidth,
+    height: vv?.height ?? window.innerHeight,
+  };
+}
+
 export function measurePortraitDockLayout(dockHeight: number): PortraitDockLayout {
   if (typeof window === "undefined") return { mode: "bottom" };
 
