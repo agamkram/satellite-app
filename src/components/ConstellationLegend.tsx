@@ -15,15 +15,25 @@ interface ConstellationLegendProps {
 }
 
 const PANEL_GAP = 36;
+const DESKTOP_TOP = 14;
+
+function isDesktopPointer() {
+  return (
+    navigator.maxTouchPoints === 0 &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  );
+}
 
 function getEdgeInset(wide: boolean) {
   const { top, right } = measureHomeScreenInsets();
   const baseRight = wide ? 20 : 12;
+  const baseTop = isDesktopPointer() ? DESKTOP_TOP : 0;
+  const resolvedTop = Math.max(baseTop, top);
 
   return {
-    top,
+    top: resolvedTop,
     right: Math.max(baseRight, right),
-    panelTop: top + PANEL_GAP,
+    panelTop: resolvedTop + PANEL_GAP,
   };
 }
 
