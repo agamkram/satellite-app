@@ -56,19 +56,39 @@ export function OrbitalViewer() {
   const [viewportAspect, setViewportAspect] = useState(() =>
     typeof window === "undefined" ? 1 : window.innerWidth / window.innerHeight,
   );
+  const [portraitDockBottom, setPortraitDockBottom] = useState<number | null>(null);
 
   useEffect(() => {
-    const updateAspect = () => {
+    const updateViewport = () => {
       setViewportAspect(window.innerWidth / window.innerHeight);
+
+      const portrait = window.matchMedia(
+        "(max-width: 767px) and (orientation: portrait)",
+      ).matches;
+
+      if (!portrait) {
+        setPortraitDockBottom(null);
+        return;
+      }
+
+      const vv = window.visualViewport;
+      const gap = vv
+        ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height))
+        : 0;
+      setPortraitDockBottom(gap);
     };
 
-    updateAspect();
-    window.addEventListener("resize", updateAspect);
-    window.visualViewport?.addEventListener("resize", updateAspect);
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    window.addEventListener("orientationchange", updateViewport);
+    window.visualViewport?.addEventListener("resize", updateViewport);
+    window.visualViewport?.addEventListener("scroll", updateViewport);
 
     return () => {
-      window.removeEventListener("resize", updateAspect);
-      window.visualViewport?.removeEventListener("resize", updateAspect);
+      window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("orientationchange", updateViewport);
+      window.visualViewport?.removeEventListener("resize", updateViewport);
+      window.visualViewport?.removeEventListener("scroll", updateViewport);
     };
   }, []);
 
@@ -269,7 +289,14 @@ export function OrbitalViewer() {
           </div>
         ) : null}
 
-        <div className="time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent">
+        <div
+          className="time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
+          style={
+            portraitDockBottom !== null
+              ? { position: "fixed", bottom: portraitDockBottom, left: 0, right: 0 }
+              : undefined
+          }
+        >
           <TimeControls
             simTime={simTime}
             offsetHours={offsetHours}

@@ -77,14 +77,7 @@ body {
 }
 
 #ov-constellation-btn,
-#ov-constellation-panel,
-#ov-time-controls {
+#ov-constellation-panel {
   position: fixed;
   z-index: 100000;
-}
-
-@media (max-width: 767px) and (orientation: portrait) {
-  .time-controls-gradient {
-    display: none;
-  }
 }
