@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { CONSTELLATIONS } from "@/lib/constellations";
 import { HOUR_MS } from "@/lib/playback-speed";
@@ -56,39 +57,28 @@ export function OrbitalViewer() {
   const [viewportAspect, setViewportAspect] = useState(() =>
     typeof window === "undefined" ? 1 : window.innerWidth / window.innerHeight,
   );
-  const [portraitDockBottom, setPortraitDockBottom] = useState<number | null>(null);
+  const [uiMounted, setUiMounted] = useState(false);
+  const [portraitPhone, setPortraitPhone] = useState(false);
 
   useEffect(() => {
+    setUiMounted(true);
+
     const updateViewport = () => {
       setViewportAspect(window.innerWidth / window.innerHeight);
-
-      const portrait = window.matchMedia(
-        "(max-width: 767px) and (orientation: portrait)",
-      ).matches;
-
-      if (!portrait) {
-        setPortraitDockBottom(null);
-        return;
-      }
-
-      const vv = window.visualViewport;
-      const gap = vv
-        ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height))
-        : 0;
-      setPortraitDockBottom(gap);
+      setPortraitPhone(
+        window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches,
+      );
     };
 
     updateViewport();
     window.addEventListener("resize", updateViewport);
     window.addEventListener("orientationchange", updateViewport);
     window.visualViewport?.addEventListener("resize", updateViewport);
-    window.visualViewport?.addEventListener("scroll", updateViewport);
 
     return () => {
       window.removeEventListener("resize", updateViewport);
       window.removeEventListener("orientationchange", updateViewport);
       window.visualViewport?.removeEventListener("resize", updateViewport);
-      window.visualViewport?.removeEventListener("scroll", updateViewport);
     };
   }, []);
 
@@ -255,6 +245,27 @@ export function OrbitalViewer() {
     }));
   }, []);
 
+  const timeControlsDock = (
+    <div
+      className={
+        portraitPhone
+          ? "time-controls-gradient pointer-events-none fixed inset-x-0 bottom-0 z-[10000] bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
+          : "time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
+      }
+    >
+      <TimeControls
+        simTime={simTime}
+        offsetHours={offsetHours}
+        speed={speed}
+        onScrubStart={handleScrubStart}
+        onScrubChange={handleScrubChange}
+        onScrubEnd={handleScrubEnd}
+        onSpeedChange={setSpeed}
+        onReset={handleReset}
+      />
+    </div>
+  );
+
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#02040a] text-white">
       <div className="absolute inset-0">
@@ -289,26 +300,12 @@ export function OrbitalViewer() {
           </div>
         ) : null}
 
-        <div
-          className="time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
-          style={
-            portraitDockBottom !== null
-              ? { position: "fixed", bottom: portraitDockBottom, left: 0, right: 0 }
-              : undefined
-          }
-        >
-          <TimeControls
-            simTime={simTime}
-            offsetHours={offsetHours}
-            speed={speed}
-            onScrubStart={handleScrubStart}
-            onScrubChange={handleScrubChange}
-            onScrubEnd={handleScrubEnd}
-            onSpeedChange={setSpeed}
-            onReset={handleReset}
-          />
-        </div>
+        {!portraitPhone ? timeControlsDock : null}
       </div>
+
+      {uiMounted && portraitPhone
+        ? createPortal(timeControlsDock, document.body)
+        : null}
 
       {loading ? (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#02040a]/80 backdrop-blur-sm">
