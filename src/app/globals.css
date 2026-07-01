@@ -77,7 +77,8 @@ body {
 }
 
 #ov-constellation-btn,
-#ov-constellation-panel {
+#ov-constellation-panel,
+#ov-time-dock {
   position: fixed;
   z-index: 100000;
 }

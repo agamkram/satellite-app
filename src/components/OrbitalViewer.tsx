@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { CONSTELLATIONS } from "@/lib/constellations";
+import {
+  isPortraitPhone,
+  measurePortraitDockTop,
+} from "@/lib/ios-home-screen";
 import { HOUR_MS } from "@/lib/playback-speed";
 import {
   computeFitCameraDistance,
@@ -59,28 +63,59 @@ export function OrbitalViewer() {
   );
   const [uiMounted, setUiMounted] = useState(false);
   const [portraitPhone, setPortraitPhone] = useState(false);
+  const [portraitDockTop, setPortraitDockTop] = useState<number | null>(null);
+  const portraitDockRef = useRef<HTMLDivElement>(null);
+
+  const updatePortraitDock = useCallback(() => {
+    const portrait = isPortraitPhone();
+    setPortraitPhone(portrait);
+
+    if (!portrait || !portraitDockRef.current) {
+      setPortraitDockTop(null);
+      return;
+    }
+
+    const dockHeight = portraitDockRef.current.offsetHeight;
+    setPortraitDockTop(measurePortraitDockTop(dockHeight));
+  }, []);
 
   useEffect(() => {
     setUiMounted(true);
 
     const updateViewport = () => {
       setViewportAspect(window.innerWidth / window.innerHeight);
-      setPortraitPhone(
-        window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches,
-      );
+      updatePortraitDock();
     };
 
     updateViewport();
     window.addEventListener("resize", updateViewport);
     window.addEventListener("orientationchange", updateViewport);
     window.visualViewport?.addEventListener("resize", updateViewport);
+    window.visualViewport?.addEventListener("scroll", updateViewport);
 
     return () => {
       window.removeEventListener("resize", updateViewport);
       window.removeEventListener("orientationchange", updateViewport);
       window.visualViewport?.removeEventListener("resize", updateViewport);
+      window.visualViewport?.removeEventListener("scroll", updateViewport);
     };
-  }, []);
+  }, [updatePortraitDock]);
+
+  useEffect(() => {
+    if (!portraitPhone || !portraitDockRef.current) return;
+
+    const dock = portraitDockRef.current;
+    const observer = new ResizeObserver(() => updatePortraitDock());
+
+    observer.observe(dock);
+    updatePortraitDock();
+    const frame = requestAnimationFrame(updatePortraitDock);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [portraitPhone, simTime, offsetHours, speed, updatePortraitDock]);
 
   const { fitCameraDistance, maxCameraDistance } = useMemo(() => {
     if (satellites.length === 0) {
@@ -245,29 +280,40 @@ export function OrbitalViewer() {
     }));
   }, []);
 
-  const timeControlsDock = (
+  const timeControlProps = {
+    simTime,
+    offsetHours,
+    speed,
+    onScrubStart: handleScrubStart,
+    onScrubChange: handleScrubChange,
+    onScrubEnd: handleScrubEnd,
+    onSpeedChange: setSpeed,
+    onReset: handleReset,
+  };
+
+  const landscapeTimeControlsDock = (
+    <div className="time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent">
+      <TimeControls {...timeControlProps} />
+    </div>
+  );
+
+  const portraitTimeControlsDock = (
     <div
-      className={
-        portraitPhone
-          ? "time-controls-gradient pointer-events-none fixed inset-x-0 bottom-0 z-[10000] bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
-          : "time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
-      }
+      id="ov-time-dock"
+      ref={portraitDockRef}
+      className="time-controls-gradient pointer-events-none fixed inset-x-0 z-[10000] bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
+      style={portraitDockTop !== null ? { top: portraitDockTop } : { bottom: 0 }}
     >
-      <TimeControls
-        simTime={simTime}
-        offsetHours={offsetHours}
-        speed={speed}
-        onScrubStart={handleScrubStart}
-        onScrubChange={handleScrubChange}
-        onScrubEnd={handleScrubEnd}
-        onSpeedChange={setSpeed}
-        onReset={handleReset}
-      />
+      <TimeControls {...timeControlProps} />
     </div>
   );
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-[#02040a] text-white">
+    <div
+      className={`relative w-full overflow-hidden bg-[#02040a] text-white ${
+        portraitPhone ? "h-svh" : "h-dvh"
+      }`}
+    >
       <div className="absolute inset-0">
         {!loading && satellites.length > 0 ? (
           <OrbitalScene
@@ -300,11 +346,11 @@ export function OrbitalViewer() {
           </div>
         ) : null}
 
-        {!portraitPhone ? timeControlsDock : null}
+        {!portraitPhone ? landscapeTimeControlsDock : null}
       </div>
 
       {uiMounted && portraitPhone
-        ? createPortal(timeControlsDock, document.body)
+        ? createPortal(portraitTimeControlsDock, document.body)
         : null}
 
       {loading ? (

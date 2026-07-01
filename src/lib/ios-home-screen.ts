@@ -49,3 +49,18 @@ export function measureHomeScreenInsets(): { top: number; right: number } {
     right: readEnvInset("right"),
   };
 }
+
+export function isPortraitPhone(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.innerWidth < 768 && window.innerHeight > window.innerWidth;
+}
+
+export function measurePortraitDockTop(dockHeight: number): number {
+  if (typeof window === "undefined") return 0;
+
+  const vv = window.visualViewport;
+  const visibleTop = vv?.offsetTop ?? 0;
+  const visibleHeight = vv?.height ?? window.innerHeight;
+
+  return Math.max(0, visibleTop + visibleHeight - dockHeight);
+}
