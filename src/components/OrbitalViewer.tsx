@@ -269,7 +269,7 @@ export function OrbitalViewer() {
           </div>
         ) : null}
 
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent">
+        <div className="time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent">
           <TimeControls
             simTime={simTime}
             offsetHours={offsetHours}

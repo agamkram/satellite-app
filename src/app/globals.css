@@ -2,7 +2,6 @@
 
 @custom-variant tall (@media (min-width: 640px) and (min-height: 520px));
 @custom-variant short-landscape (@media (orientation: landscape) and (max-height: 500px));
-@custom-variant phone-portrait (@media (max-width: 767px) and (orientation: portrait));
 @custom-variant desktop (@media (min-width: 1024px) and (pointer: fine));
 
 :root {
@@ -81,4 +80,42 @@ body {
 #ov-constellation-panel {
   position: fixed;
   z-index: 100000;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .time-controls-gradient {
+    background: linear-gradient(
+      to top,
+      rgba(2, 4, 10, 0.92) 0%,
+      rgba(2, 4, 10, 0.45) 42%,
+      transparent 100%
+    );
+  }
+
+  .time-controls-dock {
+    padding-top: 0;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .time-controls-panel {
+    display: flex;
+    flex-direction: column;
+    padding-top: 0.45rem;
+    padding-bottom: 0.3rem;
+  }
+
+  .time-controls-time {
+    order: 0;
+    margin-bottom: 0.2rem;
+  }
+
+  .time-controls-actions {
+    order: 1;
+    margin-top: 0;
+  }
+
+  .time-controls-slider {
+    order: 2;
+    margin-top: 0.55rem;
+  }
 }
