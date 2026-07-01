@@ -91,7 +91,11 @@ body {
 
 @media (display-mode: standalone), (display-mode: fullscreen) {
   #ov-time-dock {
-    bottom: 0 !important;
+    bottom: -8px !important;
     top: auto !important;
+  }
+
+  #ov-time-dock > div {
+    padding-bottom: max(0.2rem, calc(env(safe-area-inset-bottom) - 8px)) !important;
   }
 }
