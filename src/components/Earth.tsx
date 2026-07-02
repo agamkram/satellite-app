@@ -3,11 +3,15 @@
 import { useTexture } from "@react-three/drei";
 import { GLOBE_RADIUS } from "@/lib/satellite-math";
 
-export function Earth() {
+interface EarthProps {
+  rotationY?: number;
+}
+
+export function Earth({ rotationY = 0 }: EarthProps) {
   const earthTexture = useTexture("/earth.jpg");
 
   return (
-    <group>
+    <group rotation={[0, rotationY, 0]}>
       <mesh>
         <sphereGeometry args={[GLOBE_RADIUS, 64, 64]} />
         <meshStandardMaterial map={earthTexture} roughness={0.85} metalness={0.05} />

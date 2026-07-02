@@ -1,8 +1,14 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import {
+  CARD_CAMERA_DISTANCE,
+  CARD_CONSTELLATION_IDS,
+  isCardPreview,
+} from "@/lib/card-preview";
 import { CONSTELLATIONS } from "@/lib/constellations";
 import {
   isPortraitPhone,
@@ -24,11 +30,20 @@ import { ConstellationLegend } from "./ConstellationLegend";
 import { OrbitalScene } from "./OrbitalScene";
 import { TimeControls } from "./TimeControls";
 
-const INITIAL_VISIBILITY = Object.fromEntries(
-  CONSTELLATIONS.map((constellation) => [constellation.id, true]),
-);
+function buildInitialVisibility(cardMode: boolean) {
+  return Object.fromEntries(
+    CONSTELLATIONS.map((constellation) => [
+      constellation.id,
+      cardMode
+        ? (CARD_CONSTELLATION_IDS as readonly string[]).includes(constellation.id)
+        : true,
+    ]),
+  );
+}
 
 export function OrbitalViewer() {
+  const searchParams = useSearchParams();
+  const cardMode = isCardPreview(searchParams);
   const [satellites, setSatellites] = useState<SatelliteRecord[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -37,7 +52,9 @@ export function OrbitalViewer() {
   const [speed, setSpeed] = useState(1);
   const [offsetHours, setOffsetHours] = useState(0);
   const [simTime, setSimTime] = useState(() => Date.now());
-  const [visibleConstellations, setVisibleConstellations] = useState(INITIAL_VISIBILITY);
+  const [visibleConstellations, setVisibleConstellations] = useState(() =>
+    buildInitialVisibility(cardMode),
+  );
   const [legendOpen, setLegendOpen] = useState(false);
 
   const baseTimeRef = useRef(Date.now());
@@ -138,7 +155,29 @@ export function OrbitalViewer() {
     };
   }, [portraitPhone, simTime, offsetHours, speed, updatePortraitDock]);
 
+  const activeConstellations = useMemo(
+    () =>
+      cardMode
+        ? CONSTELLATIONS.filter((constellation) =>
+            (CARD_CONSTELLATION_IDS as readonly string[]).includes(constellation.id),
+          )
+        : CONSTELLATIONS,
+    [cardMode],
+  );
+
+  const cardCameraPosition = useMemo(
+    (): [number, number, number] => [0, 0, CARD_CAMERA_DISTANCE],
+    [],
+  );
+
   const { fitCameraDistance, maxCameraDistance } = useMemo(() => {
+    if (cardMode) {
+      return {
+        fitCameraDistance: CARD_CAMERA_DISTANCE,
+        maxCameraDistance: CARD_CAMERA_DISTANCE,
+      };
+    }
+
     if (satellites.length === 0) {
       return {
         fitCameraDistance: 6,
@@ -160,7 +199,7 @@ export function OrbitalViewer() {
       fitCameraDistance: fit,
       maxCameraDistance: Math.max(fit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
     };
-  }, [satellites, viewportAspect]);
+  }, [cardMode, satellites, viewportAspect]);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,7 +211,7 @@ export function OrbitalViewer() {
         setWarning(null);
 
         const results = await Promise.allSettled(
-          CONSTELLATIONS.map(async (constellation) => {
+          activeConstellations.map(async (constellation) => {
             const response = await fetch(`/api/satellites?group=${constellation.id}`);
             const raw = await response.text();
 
@@ -210,7 +249,7 @@ export function OrbitalViewer() {
         const failures = results
           .map((result, index) =>
             result.status === "rejected"
-              ? `${CONSTELLATIONS[index].name}: ${
+              ? `${activeConstellations[index].name}: ${
                   result.reason instanceof Error ? result.reason.message : "failed"
                 }`
               : null,
@@ -251,7 +290,7 @@ export function OrbitalViewer() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeConstellations]);
 
   const handleScrubStart = useCallback(() => {
     scrubbingRef.current = true;
@@ -351,29 +390,33 @@ export function OrbitalViewer() {
             onUiUpdate={handleUiUpdate}
             fitCameraDistance={fitCameraDistance}
             maxCameraDistance={maxCameraDistance}
+            cameraPosition={cardMode ? cardCameraPosition : undefined}
+            cardMode={cardMode}
           />
         ) : null}
       </div>
 
-      <ConstellationLegend
-        counts={counts}
-        visibleConstellations={visibleConstellations}
-        open={legendOpen}
-        onOpenChange={setLegendOpen}
-        onToggle={toggleConstellation}
-      />
+      {!cardMode ? (
+        <ConstellationLegend
+          counts={counts}
+          visibleConstellations={visibleConstellations}
+          open={legendOpen}
+          onOpenChange={setLegendOpen}
+          onToggle={toggleConstellation}
+        />
+      ) : null}
 
       <div className="pointer-events-none absolute inset-0 z-10">
-        {warning ? (
+        {!cardMode && warning ? (
           <div className="pointer-events-auto absolute left-1/2 top-3 z-30 max-w-md -translate-x-1/2 rounded-full border border-amber-400/25 bg-amber-950/80 px-3 py-1.5 text-center text-xs text-amber-100">
             {warning}
           </div>
         ) : null}
 
-        {!portraitPhone ? landscapeTimeControlsDock : null}
+        {!cardMode && !portraitPhone ? landscapeTimeControlsDock : null}
       </div>
 
-      {uiMounted && portraitPhone
+      {!cardMode && uiMounted && portraitPhone
         ? createPortal(portraitTimeControlsDock, document.body)
         : null}
 

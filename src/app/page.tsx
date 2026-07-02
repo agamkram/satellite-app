@@ -1,5 +1,11 @@
+import { Suspense } from "react";
+
 import { OrbitalViewer } from "@/components/OrbitalViewer";
 
 export default function Home() {
-  return <OrbitalViewer />;
+  return (
+    <Suspense fallback={null}>
+      <OrbitalViewer />
+    </Suspense>
+  );
 }

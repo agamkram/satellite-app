@@ -3,6 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 
+import { CARD_EARTH_ROTATION_Y } from "@/lib/card-preview";
 import {
   CAMERA_FOV,
   CAMERA_MIN_DISTANCE,
@@ -25,6 +26,8 @@ interface OrbitalSceneProps {
   onUiUpdate: (offsetHours: number) => void;
   fitCameraDistance: number;
   maxCameraDistance: number;
+  cameraPosition?: [number, number, number];
+  cardMode?: boolean;
 }
 
 export function OrbitalScene({
@@ -38,16 +41,23 @@ export function OrbitalScene({
   onUiUpdate,
   fitCameraDistance,
   maxCameraDistance,
+  cameraPosition,
+  cardMode = false,
 }: OrbitalSceneProps) {
   return (
     <Canvas
       frameloop="always"
-      camera={{ position: [0, 0, fitCameraDistance], fov: CAMERA_FOV, near: 0.1, far: 200 }}
+      camera={{
+        position: cameraPosition ?? [0, 0, fitCameraDistance],
+        fov: CAMERA_FOV,
+        near: 0.1,
+        far: 200,
+      }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ touchAction: "none" }}
     >
-      <CameraFit distance={fitCameraDistance} />
+      <CameraFit distance={fitCameraDistance} position={cameraPosition} />
       <SceneClock
         speedRef={speedRef}
         baseTimeRef={baseTimeRef}
@@ -56,10 +66,13 @@ export function OrbitalScene({
         scrubbingRef={scrubbingRef}
         onUiUpdate={onUiUpdate}
       />
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[8, 4, 2]} intensity={1.4} />
+      <ambientLight intensity={cardMode ? 0.62 : 0.35} />
+      <directionalLight
+        position={cardMode ? [6, 2, 5] : [8, 4, 2]}
+        intensity={cardMode ? 1.05 : 1.4}
+      />
       <Starfield />
-      <Earth />
+      <Earth rotationY={cardMode ? CARD_EARTH_ROTATION_Y : 0} />
       <SatelliteField
         satellites={satellites}
         visibleConstellations={visibleConstellations}

@@ -5,13 +5,15 @@ import { useEffect } from "react";
 
 interface CameraFitProps {
   distance: number;
+  position?: [number, number, number];
 }
 
-export function CameraFit({ distance }: CameraFitProps) {
+export function CameraFit({ distance, position }: CameraFitProps) {
   const { camera, controls } = useThree();
+  const [x, y, z] = position ?? [0, 0, distance];
 
   useEffect(() => {
-    camera.position.set(0, 0, distance);
+    camera.position.set(x, y, z);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
 
@@ -21,7 +23,7 @@ export function CameraFit({ distance }: CameraFitProps) {
     } | null;
     orbitControls?.target?.set(0, 0, 0);
     orbitControls?.update?.();
-  }, [camera, controls, distance]);
+  }, [camera, controls, distance, x, y, z]);
 
   return null;
 }
