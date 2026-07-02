@@ -9,7 +9,7 @@ export const CAMERA_MIN_DISTANCE = 2.6;
 export const CAMERA_FOV = 45;
 export const DEFAULT_EARTH_CAMERA_DISTANCE = 3.45;
 export const DEFAULT_MAX_CAMERA_DISTANCE = 18;
-export const DESKTOP_EARTH_FIT_MARGIN = 0.68;
+export const DESKTOP_EARTH_FIT_MARGIN = 0.63;
 
 export interface SatelliteRecord {
   id: string;
