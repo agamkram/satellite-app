@@ -82,6 +82,22 @@ body {
   }
 }
 
+@media (min-width: 1024px) and (pointer: fine) {
+  .time-slider {
+    height: 0.35rem;
+  }
+
+  .time-slider::-webkit-slider-thumb {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .time-slider::-moz-range-thumb {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+}
+
 #ov-constellation-btn,
 #ov-constellation-panel,
 #ov-time-dock {
