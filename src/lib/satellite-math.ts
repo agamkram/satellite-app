@@ -109,7 +109,7 @@ export function computeMaxOrbitalRadiusScene(
 /** Opening view: fit Earth inside the viewport without clipping. */
 export function computeEarthFitCameraDistance(
   fovDeg = CAMERA_FOV,
-  margin = 0.86,
+  margin = 0.78,
   aspect = 1,
 ): number {
   const radius = GLOBE_RADIUS * 1.02;
