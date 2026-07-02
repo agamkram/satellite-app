@@ -7,6 +7,7 @@ export const SCENE_SCALE = GLOBE_RADIUS / EARTH_RADIUS_KM;
 export const HIDDEN_POSITION = 9999;
 export const CAMERA_MIN_DISTANCE = 2.6;
 export const CAMERA_FOV = 45;
+export const DEFAULT_EARTH_CAMERA_DISTANCE = 3.45;
 export const DEFAULT_MAX_CAMERA_DISTANCE = 18;
 
 export interface SatelliteRecord {
@@ -103,6 +104,23 @@ export function computeMaxOrbitalRadiusScene(
   }
 
   return max;
+}
+
+/** Opening view: fill the viewport with Earth (like other Mark globe apps). */
+export function computeEarthFitCameraDistance(
+  fovDeg = CAMERA_FOV,
+  margin = 0.86,
+  aspect = 1,
+): number {
+  const radius = GLOBE_RADIUS * 1.02;
+  const halfVFovRad = (fovDeg / 2) * (Math.PI / 180);
+  const halfHFovRad = Math.atan(Math.tan(halfVFovRad) * Math.max(aspect, 0.1));
+  const distV = radius / (Math.tan(halfVFovRad) * margin);
+  const distH = radius / (Math.tan(halfHFovRad) * margin);
+  const isPortrait = aspect < 1;
+  const fit = isPortrait ? distV : Math.max(distV, distH);
+
+  return Math.max(fit, DEFAULT_EARTH_CAMERA_DISTANCE, CAMERA_MIN_DISTANCE);
 }
 
 export function computeFitCameraDistance(

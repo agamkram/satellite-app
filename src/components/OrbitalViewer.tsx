@@ -19,6 +19,7 @@ import {
 } from "@/lib/ios-home-screen";
 import { HOUR_MS } from "@/lib/playback-speed";
 import {
+  computeEarthFitCameraDistance,
   computeFitCameraDistance,
   computeMaxOrbitalRadiusScene,
   DEFAULT_MAX_CAMERA_DISTANCE,
@@ -178,9 +179,15 @@ export function OrbitalViewer() {
       };
     }
 
+    const earthFitDistance = computeEarthFitCameraDistance(
+      undefined,
+      undefined,
+      viewportAspect,
+    );
+
     if (satellites.length === 0) {
       return {
-        fitCameraDistance: 6,
+        fitCameraDistance: earthFitDistance,
         maxCameraDistance: DEFAULT_MAX_CAMERA_DISTANCE,
       };
     }
@@ -188,7 +195,7 @@ export function OrbitalViewer() {
     const maxOrbitalRadius = computeMaxOrbitalRadiusScene(satellites);
     const isPortrait = viewportAspect < 1;
     const padding = isPortrait ? 1.22 : 1.15;
-    const fit = computeFitCameraDistance(
+    const orbitFit = computeFitCameraDistance(
       maxOrbitalRadius,
       undefined,
       padding,
@@ -196,8 +203,8 @@ export function OrbitalViewer() {
     );
 
     return {
-      fitCameraDistance: fit,
-      maxCameraDistance: Math.max(fit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
+      fitCameraDistance: earthFitDistance,
+      maxCameraDistance: Math.max(orbitFit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
     };
   }, [cardMode, satellites, viewportAspect]);
 

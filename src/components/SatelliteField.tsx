@@ -6,6 +6,7 @@ import * as THREE from "three";
 
 import { CONSTELLATION_BY_ID } from "@/lib/constellations";
 import {
+  DEFAULT_EARTH_CAMERA_DISTANCE,
   lerpPositionBuffers,
   SatelliteRecord,
   writeSatellitePosition,
@@ -19,7 +20,7 @@ import {
 
 const PROPAGATE_INTERVAL_MS = 50;
 const SNAP_TIME_JUMP_MS = 5_000;
-const DEFAULT_CAMERA_DISTANCE = 6;
+const DEFAULT_CAMERA_DISTANCE = DEFAULT_EARTH_CAMERA_DISTANCE;
 const CAMERA_SIZE_EPSILON = 0.02;
 
 interface RenderGroup {
