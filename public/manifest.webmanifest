@@ -1,0 +1,21 @@
+{
+  "name": "Orbital View",
+  "short_name": "Orbital View",
+  "description": "Interactive 3D map of satellites in Earth orbit",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#02040a",
+  "theme_color": "#02040a",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

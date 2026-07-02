@@ -16,6 +16,14 @@ export const metadata: Metadata = {
   title: "Orbital View",
   description:
     "Interactive 3D map of satellites in Earth orbit with constellation colors and time scrubbing.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
