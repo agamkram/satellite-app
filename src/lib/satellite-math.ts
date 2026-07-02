@@ -106,7 +106,7 @@ export function computeMaxOrbitalRadiusScene(
   return max;
 }
 
-/** Opening view: fill the viewport with Earth (like other Mark globe apps). */
+/** Opening view: fit Earth inside the viewport without clipping. */
 export function computeEarthFitCameraDistance(
   fovDeg = CAMERA_FOV,
   margin = 0.86,
@@ -117,10 +117,8 @@ export function computeEarthFitCameraDistance(
   const halfHFovRad = Math.atan(Math.tan(halfVFovRad) * Math.max(aspect, 0.1));
   const distV = radius / (Math.tan(halfVFovRad) * margin);
   const distH = radius / (Math.tan(halfHFovRad) * margin);
-  const isPortrait = aspect < 1;
-  const fit = isPortrait ? distV : Math.max(distV, distH);
 
-  return Math.max(fit, DEFAULT_EARTH_CAMERA_DISTANCE, CAMERA_MIN_DISTANCE);
+  return Math.max(distV, distH, CAMERA_MIN_DISTANCE);
 }
 
 export function computeFitCameraDistance(
