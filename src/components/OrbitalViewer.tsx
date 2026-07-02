@@ -23,6 +23,7 @@ import {
   computeEarthFitCameraDistance,
   computeFitCameraDistance,
   computeMaxOrbitalRadiusScene,
+  DESKTOP_EARTH_FIT_MARGIN,
   DEFAULT_MAX_CAMERA_DISTANCE,
   parseOmmRecord,
   SatelliteRecord,
@@ -208,9 +209,12 @@ export function OrbitalViewer() {
       };
     }
 
+    const earthFitMargin =
+      desktopViewport && !portraitPhone ? DESKTOP_EARTH_FIT_MARGIN : undefined;
+
     const earthFitDistance = computeEarthFitCameraDistance(
       undefined,
-      undefined,
+      earthFitMargin,
       viewportAspect,
     );
 
@@ -235,7 +239,7 @@ export function OrbitalViewer() {
       fitCameraDistance: earthFitDistance,
       maxCameraDistance: Math.max(orbitFit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
     };
-  }, [cardMode, satellites, viewportAspect]);
+  }, [cardMode, satellites, viewportAspect, desktopViewport, portraitPhone]);
 
   const desktopViewOffsetY = useMemo(() => {
     if (cardMode || !desktopViewport || portraitPhone || landscapeDockHeight <= 0) {
