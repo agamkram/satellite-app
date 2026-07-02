@@ -84,14 +84,20 @@ export function OrbitalViewer() {
   );
   const [uiMounted, setUiMounted] = useState(false);
   const [portraitPhone, setPortraitPhone] = useState(false);
+  const [desktopViewport, setDesktopViewport] = useState(false);
+  const [landscapeDockHeight, setLandscapeDockHeight] = useState(0);
   const [portraitDockLayout, setPortraitDockLayout] = useState<PortraitDockLayout | null>(
     null,
   );
   const portraitDockRef = useRef<HTMLDivElement>(null);
+  const landscapeDockRef = useRef<HTMLDivElement>(null);
 
   const updatePortraitDock = useCallback(() => {
     const portrait = isPortraitPhone();
     setPortraitPhone(portrait);
+    setDesktopViewport(
+      window.matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
+    );
 
     if (!portrait || !portraitDockRef.current) {
       setPortraitDockLayout(null);
@@ -100,6 +106,15 @@ export function OrbitalViewer() {
 
     const dockHeight = portraitDockRef.current.offsetHeight;
     setPortraitDockLayout(measurePortraitDockLayout(dockHeight));
+  }, []);
+
+  const updateLandscapeDock = useCallback(() => {
+    if (isPortraitPhone() || !landscapeDockRef.current) {
+      setLandscapeDockHeight(0);
+      return;
+    }
+
+    setLandscapeDockHeight(landscapeDockRef.current.offsetHeight);
   }, []);
 
   useEffect(() => {
@@ -112,6 +127,7 @@ export function OrbitalViewer() {
       if (!force && layoutReady && performance.now() - layoutShownAt < 350) return;
       setViewportAspect(window.innerWidth / window.innerHeight);
       updatePortraitDock();
+      updateLandscapeDock();
     };
 
     void (async () => {
@@ -138,7 +154,19 @@ export function OrbitalViewer() {
       window.visualViewport?.removeEventListener("resize", onResize);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [updatePortraitDock]);
+  }, [updatePortraitDock, updateLandscapeDock]);
+
+  useEffect(() => {
+    if (portraitPhone || !landscapeDockRef.current) return;
+
+    const dock = landscapeDockRef.current;
+    const observer = new ResizeObserver(() => updateLandscapeDock());
+
+    observer.observe(dock);
+    updateLandscapeDock();
+
+    return () => observer.disconnect();
+  }, [portraitPhone, simTime, offsetHours, speed, updateLandscapeDock]);
 
   useEffect(() => {
     if (!portraitPhone || !portraitDockRef.current) return;
@@ -179,10 +207,17 @@ export function OrbitalViewer() {
       };
     }
 
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const bottomInsetRatio =
+      desktopViewport && !portraitPhone && landscapeDockHeight > 0
+        ? landscapeDockHeight / viewportHeight
+        : 0;
+
     const earthFitDistance = computeEarthFitCameraDistance(
       undefined,
       undefined,
       viewportAspect,
+      bottomInsetRatio,
     );
 
     if (satellites.length === 0) {
@@ -206,7 +241,7 @@ export function OrbitalViewer() {
       fitCameraDistance: earthFitDistance,
       maxCameraDistance: Math.max(orbitFit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
     };
-  }, [cardMode, satellites, viewportAspect]);
+  }, [cardMode, satellites, viewportAspect, desktopViewport, portraitPhone, landscapeDockHeight]);
 
   useEffect(() => {
     let cancelled = false;
@@ -359,7 +394,10 @@ export function OrbitalViewer() {
   };
 
   const landscapeTimeControlsDock = (
-    <div className="time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent">
+    <div
+      ref={landscapeDockRef}
+      className="time-controls-gradient absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#02040a]/80 via-[#02040a]/35 to-transparent"
+    >
       <TimeControls {...timeControlProps} />
     </div>
   );

@@ -111,11 +111,15 @@ export function computeEarthFitCameraDistance(
   fovDeg = CAMERA_FOV,
   margin = 0.78,
   aspect = 1,
+  bottomInsetRatio = 0,
 ): number {
-  const radius = GLOBE_RADIUS * 1.02;
+  const nearEarthPadding = bottomInsetRatio > 0 ? 1.07 : 1.02;
+  const radius = GLOBE_RADIUS * nearEarthPadding;
   const halfVFovRad = (fovDeg / 2) * (Math.PI / 180);
   const halfHFovRad = Math.atan(Math.tan(halfVFovRad) * Math.max(aspect, 0.1));
-  const distV = radius / (Math.tan(halfVFovRad) * margin);
+  const usableHeightRatio = Math.max(0.62, 1 - bottomInsetRatio * 1.2);
+  const verticalMargin = margin * usableHeightRatio;
+  const distV = radius / (Math.tan(halfVFovRad) * verticalMargin);
   const distH = radius / (Math.tan(halfHFovRad) * margin);
 
   return Math.max(distV, distH, CAMERA_MIN_DISTANCE);
