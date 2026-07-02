@@ -27,6 +27,7 @@ interface OrbitalSceneProps {
   fitCameraDistance: number;
   maxCameraDistance: number;
   cameraPosition?: [number, number, number];
+  viewOffsetY?: number;
   cardMode?: boolean;
 }
 
@@ -42,6 +43,7 @@ export function OrbitalScene({
   fitCameraDistance,
   maxCameraDistance,
   cameraPosition,
+  viewOffsetY = 0,
   cardMode = false,
 }: OrbitalSceneProps) {
   return (
@@ -57,7 +59,11 @@ export function OrbitalScene({
       gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ touchAction: "none" }}
     >
-      <CameraFit distance={fitCameraDistance} position={cameraPosition} />
+      <CameraFit
+        distance={fitCameraDistance}
+        position={cameraPosition}
+        viewOffsetY={viewOffsetY}
+      />
       <SceneClock
         speedRef={speedRef}
         baseTimeRef={baseTimeRef}

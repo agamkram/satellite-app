@@ -111,18 +111,23 @@ export function computeEarthFitCameraDistance(
   fovDeg = CAMERA_FOV,
   margin = 0.78,
   aspect = 1,
-  bottomInsetRatio = 0,
 ): number {
-  const nearEarthPadding = bottomInsetRatio > 0 ? 1.09 : 1.02;
-  const radius = GLOBE_RADIUS * nearEarthPadding;
+  const radius = GLOBE_RADIUS * 1.02;
   const halfVFovRad = (fovDeg / 2) * (Math.PI / 180);
   const halfHFovRad = Math.atan(Math.tan(halfVFovRad) * Math.max(aspect, 0.1));
-  const usableHeightRatio = Math.max(0.58, 1 - bottomInsetRatio * 1.5);
-  const verticalMargin = margin * usableHeightRatio;
-  const distV = radius / (Math.tan(halfVFovRad) * verticalMargin);
+  const distV = radius / (Math.tan(halfVFovRad) * margin);
   const distH = radius / (Math.tan(halfHFovRad) * margin);
 
   return Math.max(distV, distH, CAMERA_MIN_DISTANCE);
+}
+
+/** Shift the scene center upward to sit between the page top and a bottom UI dock. */
+export function computeDesktopViewOffsetY(
+  dockHeight: number,
+  viewportHeight: number,
+): number {
+  if (dockHeight <= 0 || viewportHeight <= 0) return 0;
+  return dockHeight / 2;
 }
 
 export function computeFitCameraDistance(

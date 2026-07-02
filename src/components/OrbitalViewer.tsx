@@ -19,6 +19,7 @@ import {
 } from "@/lib/ios-home-screen";
 import { HOUR_MS } from "@/lib/playback-speed";
 import {
+  computeDesktopViewOffsetY,
   computeEarthFitCameraDistance,
   computeFitCameraDistance,
   computeMaxOrbitalRadiusScene,
@@ -207,17 +208,10 @@ export function OrbitalViewer() {
       };
     }
 
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-    const bottomInsetRatio =
-      desktopViewport && !portraitPhone && landscapeDockHeight > 0
-        ? landscapeDockHeight / viewportHeight
-        : 0;
-
     const earthFitDistance = computeEarthFitCameraDistance(
       undefined,
       undefined,
       viewportAspect,
-      bottomInsetRatio,
     );
 
     if (satellites.length === 0) {
@@ -241,7 +235,16 @@ export function OrbitalViewer() {
       fitCameraDistance: earthFitDistance,
       maxCameraDistance: Math.max(orbitFit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
     };
-  }, [cardMode, satellites, viewportAspect, desktopViewport, portraitPhone, landscapeDockHeight]);
+  }, [cardMode, satellites, viewportAspect]);
+
+  const desktopViewOffsetY = useMemo(() => {
+    if (cardMode || !desktopViewport || portraitPhone || landscapeDockHeight <= 0) {
+      return 0;
+    }
+
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    return computeDesktopViewOffsetY(landscapeDockHeight, viewportHeight);
+  }, [cardMode, desktopViewport, portraitPhone, landscapeDockHeight]);
 
   useEffect(() => {
     let cancelled = false;
@@ -436,6 +439,7 @@ export function OrbitalViewer() {
             fitCameraDistance={fitCameraDistance}
             maxCameraDistance={maxCameraDistance}
             cameraPosition={cardMode ? cardCameraPosition : undefined}
+            viewOffsetY={desktopViewOffsetY}
             cardMode={cardMode}
           />
         ) : null}
