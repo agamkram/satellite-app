@@ -17,7 +17,7 @@ import {
   waitForStableViewport,
   type PortraitDockLayout,
 } from "@/lib/ios-home-screen";
-import { HOUR_MS } from "@/lib/playback-speed";
+import { DEFAULT_PLAYBACK_SPEED, HOUR_MS } from "@/lib/playback-speed";
 import {
   computeDesktopViewOffsetY,
   computeEarthFitCameraDistance,
@@ -52,7 +52,7 @@ export function OrbitalViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(DEFAULT_PLAYBACK_SPEED);
   const [offsetHours, setOffsetHours] = useState(0);
   const [simTime, setSimTime] = useState(() => Date.now());
   const [visibleConstellations, setVisibleConstellations] = useState(() =>

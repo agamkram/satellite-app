@@ -7,6 +7,7 @@ const SPEED_STEPS = [
 
 export const SPEED_MIN = SPEED_STEPS[0];
 export const SPEED_MAX = SPEED_STEPS[SPEED_STEPS.length - 1];
+export const DEFAULT_PLAYBACK_SPEED = 20;
 
 function findSpeedIndex(speed: number): number {
   const exact = SPEED_STEPS.indexOf(speed as (typeof SPEED_STEPS)[number]);
