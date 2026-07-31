@@ -18,8 +18,26 @@ export const metadata: Metadata = {
   description:
     "Interactive 3D map of satellites in Earth orbit with constellation colors and time scrubbing.",
   manifest: "/manifest.webmanifest",
+  metadataBase: new URL("https://orbital.markmaga.com"),
+  openGraph: {
+    type: "website",
+    siteName: "Mark Maga",
+    title: "Orbital View",
+    description:
+      "Interactive 3D map of satellites in Earth orbit with constellation colors and time scrubbing.",
+    url: "https://orbital.markmaga.com/",
+    images: [{ url: "/icon-512.png", width: 512, height: 512 }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Orbital View",
+    description:
+      "Interactive 3D map of satellites in Earth orbit with constellation colors and time scrubbing.",
+    images: ["/icon-512.png"],
+  },
   icons: {
     icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
