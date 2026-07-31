@@ -1,6 +1,6 @@
 {
-  "name": "Orbital View",
-  "short_name": "Orbital View",
+  "name": "OrbitalView",
+  "short_name": "OrbitalView",
   "description": "Interactive 3D map of satellites in Earth orbit",
   "start_url": "/",
   "display": "standalone",
