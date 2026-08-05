@@ -450,6 +450,12 @@ export function OrbitalViewer() {
       </div>
 
       {!cardMode ? (
+        <header className="app-chrome" aria-label="OrbitalView">
+          <h1 className="app-title">OrbitalView</h1>
+        </header>
+      ) : null}
+
+      {!cardMode ? (
         <ConstellationLegend
           counts={counts}
           visibleConstellations={visibleConstellations}
@@ -461,7 +467,7 @@ export function OrbitalViewer() {
 
       <div className="pointer-events-none absolute inset-0 z-10">
         {!cardMode && warning ? (
-          <div className="pointer-events-auto absolute left-1/2 top-3 z-30 max-w-md -translate-x-1/2 rounded-full border border-amber-400/25 bg-amber-950/80 px-3 py-1.5 text-center text-xs text-amber-100">
+          <div className="pointer-events-auto absolute left-1/2 top-[calc(0.375in+env(safe-area-inset-top,0px)+0.35rem)] z-30 max-w-md -translate-x-1/2 rounded-full border border-amber-400/25 bg-amber-950/80 px-3 py-1.5 text-center text-xs text-amber-100">
             {warning}
           </div>
         ) : null}

@@ -16,6 +16,47 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Shared Mark Maga title treatment (Michroma), matches SuperMoon / SpaceXplore / SolarDashboard */
+.app-chrome {
+  position: fixed;
+  z-index: 100000;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(0.375in + env(safe-area-inset-top, 0px));
+  padding:
+    env(safe-area-inset-top, 0px)
+    max(1rem, env(safe-area-inset-right, 0px))
+    0
+    max(1rem, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.app-title {
+  margin: 0;
+  font-family: var(--font-michroma), "Michroma", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(1.05rem, 3.2vmin, 1.35rem);
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  color: #f4f7fb;
+  text-align: center;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+}
+
+@media (min-width: 1024px) and (pointer: fine) {
+  .app-chrome {
+    height: calc(0.32in + env(safe-area-inset-top, 0px));
+  }
+
+  .app-title {
+    font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+  }
+}
+
 html {
   height: 100%;
   height: -webkit-fill-available;

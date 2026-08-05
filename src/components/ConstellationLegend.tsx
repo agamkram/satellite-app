@@ -14,8 +14,11 @@ interface ConstellationLegendProps {
   onToggle: (id: string) => void;
 }
 
-const PANEL_GAP = 36;
-const DESKTOP_TOP = 14;
+/** Gap from Constellations button bottom edge to panel top — keep tight. */
+const PANEL_GAP = 34;
+/** Sit just under the Michroma title chrome (0.375in ≈ 36px content row). */
+const TITLE_CLEARANCE = 36;
+const DESKTOP_TOP = 10;
 
 function isDesktopPointer() {
   return (
@@ -28,7 +31,8 @@ function getEdgeInset(wide: boolean) {
   const { top, right } = measureHomeScreenInsets();
   const baseRight = wide ? 20 : 12;
   const baseTop = isDesktopPointer() ? DESKTOP_TOP : 0;
-  const resolvedTop = Math.max(baseTop, top);
+  // Clear the fixed app title, stay tight under it.
+  const resolvedTop = Math.max(baseTop, top) + TITLE_CLEARANCE;
 
   return {
     top: resolvedTop,
