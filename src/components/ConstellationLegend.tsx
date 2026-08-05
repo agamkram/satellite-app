@@ -87,12 +87,21 @@ export function ConstellationLegend({
 
   return createPortal(
     <>
+      {open ? (
+        <button
+          type="button"
+          aria-label="Dismiss constellations"
+          onClick={() => onOpenChange(false)}
+          className="fixed inset-0 z-[99999] cursor-default bg-transparent"
+        />
+      ) : null}
+
       <button
         id="ov-constellation-btn"
         type="button"
         onClick={() => onOpenChange(!open)}
         style={{ ...fixedStyle, top: edgeInset.top }}
-        className="pointer-events-auto rounded-full border border-white/10 bg-black/5 px-3 py-1.5 text-xs text-white/85 backdrop-blur-sm hover:bg-black/15"
+        className="pointer-events-auto z-[100000] rounded-full border border-white/10 bg-black/[0.02] px-3 py-1.5 text-xs text-white/85 backdrop-blur-sm hover:bg-black/10"
         aria-expanded={open}
         aria-label={open ? "Hide constellations" : "Show constellations"}
       >
@@ -103,7 +112,7 @@ export function ConstellationLegend({
         <div
           id="ov-constellation-panel"
           style={{ ...fixedStyle, top: edgeInset.panelTop }}
-          className="pointer-events-auto max-h-[min(50dvh,360px)] w-[min(240px,calc(100vw-1.5rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/5 p-2 backdrop-blur-sm"
+          className="pointer-events-auto z-[100000] max-h-[min(50dvh,360px)] w-[min(240px,calc(100vw-1.5rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/[0.02] p-2 backdrop-blur-sm"
         >
           <ul className="space-y-1">
             {sortedConstellations.map((constellation) => {

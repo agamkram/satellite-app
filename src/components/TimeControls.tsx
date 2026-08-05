@@ -42,7 +42,7 @@ export function TimeControls({
 }: TimeControlsProps) {
   return (
     <div className="pointer-events-auto w-full px-3 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 short-landscape:px-2 short-landscape:pb-1 short-landscape:pt-0.5 tall:px-5 tall:pt-2 desktop:px-4 desktop:pb-1 desktop:pt-1">
-      <div className="mx-auto max-w-3xl rounded-xl border border-white/10 bg-black/5 px-3 py-1.5 backdrop-blur-sm short-landscape:px-2 short-landscape:py-1 tall:py-2 desktop:px-2.5 desktop:py-1">
+      <div className="mx-auto max-w-3xl rounded-xl border border-white/10 bg-black/[0.02] px-3 py-1.5 backdrop-blur-sm short-landscape:px-2 short-landscape:py-1 tall:py-2 desktop:px-2.5 desktop:py-1">
         <div className="mb-1 flex items-center justify-between gap-2 text-[10px] text-white/50 short-landscape:mb-0.5 desktop:mb-0.5">
           <span suppressHydrationWarning className="font-mono text-white/75">
             {formatLocalTime(simTime)}
@@ -89,7 +89,7 @@ export function TimeControls({
             </button>
             <span
               aria-live="polite"
-              className="min-w-[2.75rem] rounded-md border border-white/10 bg-black/5 px-1.5 py-0.5 text-center font-mono text-xs text-white short-landscape:min-w-[2.25rem] short-landscape:px-1 tall:min-w-[3rem] tall:px-2 tall:py-1 desktop:min-w-[2.5rem] desktop:px-1.5 desktop:py-0"
+              className="min-w-[2.75rem] rounded-md border border-white/10 bg-black/[0.02] px-1.5 py-0.5 text-center font-mono text-xs text-white short-landscape:min-w-[2.25rem] short-landscape:px-1 tall:min-w-[3rem] tall:px-2 tall:py-1 desktop:min-w-[2.5rem] desktop:px-1.5 desktop:py-0"
             >
               {speed}×
             </span>
