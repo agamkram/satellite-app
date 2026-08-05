@@ -11,6 +11,55 @@ export function isIosHomeScreen(): boolean {
   );
 }
 
+/**
+ * Bug B (Bottom:full bleed): Home-screen PWA layout viewport can stay shorter
+ * than screen.height → ~5/16" black strip until orientation refresh.
+ * Lock the paint stack to screen height (phone) + tablet safe-area extra.
+ */
+export function pwaFillHeightPx(): number {
+  if (typeof window === "undefined") return 0;
+  const iw = window.innerWidth || 0;
+  const ih = window.innerHeight || 0;
+  const sw = window.screen.width || 0;
+  const sh = window.screen.height || 0;
+  // iOS keeps screen.* in portrait metrics; pick the axis for current height.
+  if (ih >= iw) return Math.max(ih, Math.max(sw, sh));
+  return Math.max(ih, Math.min(sw, sh));
+}
+
+/** iPad PWA: screen.* undershoots CSS inner — phone uses screen height instead. */
+export function pwaExtraBottomPx(): number {
+  if (typeof window === "undefined") return 0;
+  const iw = window.innerWidth || 0;
+  const ih = window.innerHeight || 0;
+  const sw = window.screen.width || 0;
+  const sh = window.screen.height || 0;
+  const screenMax = Math.max(sw, sh);
+  if (Math.min(iw, ih) < 600) return 0;
+  if (screenMax >= ih - 10) return 0;
+  return Math.max(readEnvInset("bottom"), 20);
+}
+
+/** Apply --pwa-fill-h / --pwa-extra-b when standalone; clear when not. */
+export function syncPwaFillHeight(): number {
+  if (typeof window === "undefined") return 0;
+
+  const root = document.documentElement;
+  if (!isIosHomeScreen()) {
+    root.classList.remove("pwa-standalone");
+    root.style.removeProperty("--pwa-fill-h");
+    root.style.removeProperty("--pwa-extra-b");
+    return 0;
+  }
+
+  root.classList.add("pwa-standalone");
+  const fillH = pwaFillHeightPx();
+  const extra = pwaExtraBottomPx();
+  root.style.setProperty("--pwa-fill-h", `${fillH}px`);
+  root.style.setProperty("--pwa-extra-b", `${extra}px`);
+  return fillH + extra;
+}
+
 function getInsetProbe(): HTMLDivElement {
   if (!insetProbe) {
     insetProbe = document.createElement("div");

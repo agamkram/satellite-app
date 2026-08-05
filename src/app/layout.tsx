@@ -63,6 +63,33 @@ export const viewport: Viewport = {
   themeColor: "#02040a",
 };
 
+/** Early PWA fill (Bug B): lock height before first paint — see Bottom:full bleed. */
+const PWA_FILL_BOOT = `
+(function () {
+  var n = window.navigator;
+  var standalone =
+    n.standalone === true ||
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches;
+  if (!standalone) return;
+  var root = document.documentElement;
+  root.classList.add("pwa-standalone");
+  var iw = window.innerWidth || 0;
+  var ih = window.innerHeight || 0;
+  var sw = window.screen.width || 0;
+  var sh = window.screen.height || 0;
+  var screenMax = Math.max(sw, sh);
+  var screenMin = Math.min(sw, sh);
+  var fillH = ih >= iw ? Math.max(ih, screenMax) : Math.max(ih, screenMin);
+  var extra = 0;
+  if (Math.min(iw, ih) >= 600 && screenMax < ih - 10) {
+    extra = 20;
+  }
+  root.style.setProperty("--pwa-fill-h", fillH + "px");
+  root.style.setProperty("--pwa-extra-b", extra + "px");
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -73,7 +100,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${michroma.variable} h-full antialiased`}
     >
-      <body className="h-dvh max-h-dvh overflow-hidden bg-[#02040a] font-sans text-white">
+      <body className="overflow-hidden bg-[#02040a] font-sans text-white">
+        <Script id="pwa-fill-boot" strategy="beforeInteractive">
+          {PWA_FILL_BOOT}
+        </Script>
         {children}
         <Script id="vercel-analytics-init" strategy="afterInteractive">
           {`window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };`}

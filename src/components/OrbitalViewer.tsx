@@ -14,6 +14,7 @@ import {
   isPortraitPhone,
   measurePortraitDockLayout,
   readVisualViewportSize,
+  syncPwaFillHeight,
   waitForStableViewport,
   type PortraitDockLayout,
 } from "@/lib/ios-home-screen";
@@ -127,21 +128,35 @@ export function OrbitalViewer() {
 
     const updateViewport = (force = false) => {
       if (!force && layoutReady && performance.now() - layoutShownAt < 350) return;
+      // Bug B: re-lock PWA fill height before measuring aspect / docks.
+      syncPwaFillHeight();
       setViewportAspect(window.innerWidth / window.innerHeight);
       updatePortraitDock();
       updateLandscapeDock();
     };
 
     void (async () => {
+      syncPwaFillHeight();
       await waitForStableViewport(readVisualViewportSize);
       if (cancelled) return;
       updateViewport(true);
       layoutReady = true;
       layoutShownAt = performance.now();
+      // Late settles after iOS chrome animation.
+      window.setTimeout(() => {
+        if (!cancelled) updateViewport(true);
+      }, 100);
+      window.setTimeout(() => {
+        if (!cancelled) updateViewport(true);
+      }, 400);
     })();
 
     const onResize = () => updateViewport();
-    const onOrientationChange = () => updateViewport(true);
+    const onOrientationChange = () => {
+      updateViewport(true);
+      window.setTimeout(() => updateViewport(true), 50);
+      window.setTimeout(() => updateViewport(true), 300);
+    };
     const onPageShow = () => updateViewport(true);
 
     window.addEventListener("resize", onResize);
@@ -426,9 +441,7 @@ export function OrbitalViewer() {
   );
 
   return (
-    <div
-      className="relative h-dvh w-full overflow-hidden bg-[#02040a] text-white"
-    >
+    <div id="ov-root" className="text-white">
       <div className="absolute inset-0">
         {!loading && satellites.length > 0 ? (
           <OrbitalScene
