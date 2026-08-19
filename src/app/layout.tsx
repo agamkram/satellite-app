@@ -20,15 +20,16 @@ const michroma = Michroma({
 });
 
 export const metadata: Metadata = {
-  title: "OrbitalView",
+  title: "Orbital View — 3D Earth and live satellites | Mark Maga",
   description:
     "Interactive 3D map of satellites in Earth orbit with constellation colors and time scrubbing.",
   manifest: "/manifest.webmanifest",
   metadataBase: new URL("https://orbital.markmaga.com"),
+  alternates: { canonical: "https://orbital.markmaga.com/" },
   openGraph: {
     type: "website",
     siteName: "Mark Maga",
-    title: "OrbitalView",
+    title: "Orbital View — 3D Earth and live satellites",
     description:
       "Interactive 3D map of satellites in Earth orbit with constellation colors and time scrubbing.",
     url: "https://orbital.markmaga.com/",
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "OrbitalView",
+    title: "Orbital View — 3D Earth and live satellites",
     description:
       "Interactive 3D map of satellites in Earth orbit with constellation colors and time scrubbing.",
     images: ["/icon-512.png"],
