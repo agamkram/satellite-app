@@ -59,8 +59,7 @@ export function ScaleTeachControls({
       const wide = window.matchMedia("(min-width: 640px)").matches;
       setInset(getCornerInset(wide));
       setViewportHeight(window.visualViewport?.height ?? window.innerHeight);
-      // Center Mag only on phones — not narrow Mac windows (fine pointer).
-      setPhoneLayout(isPhonePointViewport() && !isDesktopPointer());
+      setPhoneLayout(isPhonePointViewport());
     };
 
     update();

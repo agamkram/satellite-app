@@ -9,13 +9,6 @@ export const CAMERA_MIN_DISTANCE = 2.6;
 export const CAMERA_FOV = 45;
 export const DEFAULT_EARTH_CAMERA_DISTANCE = 3.45;
 export const DEFAULT_MAX_CAMERA_DISTANCE = 18;
-/** Hard cap so stale TLEs can’t make zoom-out infinite (~GEO×1.5). */
-export const MAX_CAMERA_DISTANCE = 24;
-/**
- * Hide / ignore props beyond this (scene units). GEO ≈ 13.2; allow HEO headroom.
- * Stale bundled TLEs can otherwise place sats on absurd fast orbits.
- */
-export const MAX_PLAUSIBLE_ORBIT_RADIUS_SCENE = GLOBE_RADIUS * 10;
 export const DESKTOP_EARTH_FIT_MARGIN = 0.63;
 
 export interface SatelliteRecord {
@@ -86,27 +79,16 @@ export function writeSatellitePosition(
     return;
   }
 
-  const x = eci.x * SCENE_SCALE;
-  const y = eci.z * SCENE_SCALE;
-  const z = -eci.y * SCENE_SCALE;
-  const radius = Math.hypot(x, y, z);
-  if (radius > MAX_PLAUSIBLE_ORBIT_RADIUS_SCENE) {
-    writeHidden(positions, offset);
-    return;
-  }
-
-  positions[offset] = x;
-  positions[offset + 1] = y;
-  positions[offset + 2] = z;
+  positions[offset] = eci.x * SCENE_SCALE;
+  positions[offset + 1] = eci.z * SCENE_SCALE;
+  positions[offset + 2] = -eci.y * SCENE_SCALE;
 }
 
 export function computeOrbitalRadiusScene(satrec: SatRec, date: Date): number | null {
   const eci = propagateEci(satrec, date);
   if (!eci) return null;
 
-  const radius = Math.hypot(eci.x, eci.y, eci.z) * SCENE_SCALE;
-  if (radius > MAX_PLAUSIBLE_ORBIT_RADIUS_SCENE) return null;
-  return radius;
+  return Math.hypot(eci.x, eci.y, eci.z) * SCENE_SCALE;
 }
 
 export function computeMaxOrbitalRadiusScene(
@@ -122,7 +104,7 @@ export function computeMaxOrbitalRadiusScene(
     }
   }
 
-  return Math.min(max, MAX_PLAUSIBLE_ORBIT_RADIUS_SCENE);
+  return max;
 }
 
 /** Opening view: fit Earth inside the viewport without clipping. */
