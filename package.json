@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "fetch:sats": "node scripts/fetch-sats.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
