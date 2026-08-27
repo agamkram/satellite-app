@@ -13,6 +13,8 @@ import { OmmRecord, SerializedSatellite } from "@/lib/satellite-math";
 export const dynamic = "force-dynamic";
 
 const CELESTRAK_BASE = "https://celestrak.org/NORAD/elements/gp.php";
+/** Fail fast when CelesTrak is down/slow so bundled cache can serve the page. */
+const CELESTRAK_TIMEOUT_MS = 4000;
 
 function serializeRecords(
   records: OmmRecord[],
@@ -29,13 +31,20 @@ function serializeRecords(
 async function downloadGroup(group: string): Promise<OmmRecord[]> {
   const url = `${CELESTRAK_BASE}?GROUP=${group}&FORMAT=json`;
 
-  const response = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      "User-Agent": "OrbitalView/1.0",
-      Accept: "application/json",
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(CELESTRAK_TIMEOUT_MS),
+      headers: {
+        "User-Agent": "OrbitalView/1.0",
+        Accept: "application/json",
+      },
+    });
+  } catch {
+    // Timeout / network — treat as empty so callers use cache or bundled data.
+    return [];
+  }
 
   if (
     response.status === 403 ||
@@ -139,11 +148,19 @@ export async function GET(request: NextRequest) {
 
     const satellites = await fetchConstellation(constellation.id, constellation.group);
 
-    return NextResponse.json({
-      satellites,
-      count: satellites.length,
-      constellationId: constellation.id,
-    });
+    return NextResponse.json(
+      {
+        satellites,
+        count: satellites.length,
+        constellationId: constellation.id,
+      },
+      {
+        headers: {
+          // Edge-cache successful payloads so live stays snappy when CelesTrak is sick.
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+        },
+      },
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load satellite data";
