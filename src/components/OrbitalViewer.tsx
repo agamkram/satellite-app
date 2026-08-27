@@ -27,6 +27,7 @@ import {
   DESKTOP_EARTH_FIT_MARGIN,
   DEFAULT_EARTH_CAMERA_DISTANCE,
   DEFAULT_MAX_CAMERA_DISTANCE,
+  MAX_CAMERA_DISTANCE,
   parseOmmRecord,
   SatelliteRecord,
   SerializedSatellite,
@@ -268,7 +269,10 @@ export function OrbitalViewer() {
 
     return {
       fitCameraDistance: earthFitDistance,
-      maxCameraDistance: Math.max(orbitFit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
+      maxCameraDistance: Math.min(
+        Math.max(orbitFit * 1.08, DEFAULT_MAX_CAMERA_DISTANCE),
+        MAX_CAMERA_DISTANCE,
+      ),
     };
   }, [cardMode, satellites, viewportAspect, desktopViewport, portraitPhone]);
 
