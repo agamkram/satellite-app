@@ -1,33 +1,34 @@
 "use client";
 
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { CONSTELLATION_BY_ID } from "@/lib/constellations";
 import {
-  DEFAULT_EARTH_CAMERA_DISTANCE,
   lerpPositionBuffers,
   SatelliteRecord,
   writeSatellitePosition,
 } from "@/lib/satellite-math";
-import { getSatellitePointTexture } from "@/lib/point-texture";
 import {
-  getPointSizePolicy,
-  PointSizePolicy,
+  getSizeClass,
+  isPhonePointViewport,
   resolvePointSize,
+  resolveZoomScale,
+  SizeClass,
 } from "@/lib/satellite-point-size";
 
 const PROPAGATE_INTERVAL_MS = 50;
 const SNAP_TIME_JUMP_MS = 5_000;
-const DEFAULT_CAMERA_DISTANCE = DEFAULT_EARTH_CAMERA_DISTANCE;
-const CAMERA_SIZE_EPSILON = 0.02;
+const CAMERA_SIZE_EPSILON = 0.15;
+const SIZE_FOLLOW_RATE = 10;
+const SIZE_SETTLE_EPSILON = 0.02;
 
 interface RenderGroup {
   key: string;
   constellationId: string;
   color: string;
-  sizePolicy: PointSizePolicy;
+  sizeClass: SizeClass;
   satellites: SatelliteRecord[];
   previous: Float32Array;
   target: Float32Array;
@@ -39,6 +40,7 @@ interface SatelliteFieldProps {
   visibleConstellations: Record<string, boolean>;
   simTimeRef: React.RefObject<number>;
   scrubbingRef: React.RefObject<boolean>;
+  fitCameraDistance: number;
   maxCameraDistance: number;
 }
 
@@ -49,8 +51,8 @@ function buildGroups(satelliteList: SatelliteRecord[]): RenderGroup[] {
     const meta = CONSTELLATION_BY_ID[satellite.constellationId];
     if (!meta) continue;
 
-    const sizePolicy = getPointSizePolicy(satellite.constellationId, satellite);
-    const key = `${satellite.constellationId}:${sizePolicy}`;
+    const sizeClass = getSizeClass(satellite.constellationId, satellite);
+    const key = `${satellite.constellationId}:${sizeClass}`;
 
     let group = grouped.get(key);
     if (!group) {
@@ -58,7 +60,7 @@ function buildGroups(satelliteList: SatelliteRecord[]): RenderGroup[] {
         key,
         constellationId: satellite.constellationId,
         color: meta.color,
-        sizePolicy,
+        sizeClass,
         satellites: [],
         previous: new Float32Array(),
         target: new Float32Array(),
@@ -85,9 +87,10 @@ export function SatelliteField({
   visibleConstellations,
   simTimeRef,
   scrubbingRef,
+  fitCameraDistance,
   maxCameraDistance,
 }: SatelliteFieldProps) {
-  const pointTexture = useMemo(() => getSatellitePointTexture(), []);
+  const { camera } = useThree();
   const pointsRefs = useRef<Map<string, THREE.Object3D>>(new Map());
   const groups = useMemo(() => buildGroups(satellites), [satellites]);
   const groupsRef = useRef(groups);
@@ -98,6 +101,12 @@ export function SatelliteField({
   const blendRef = useRef(1);
   const lastSimTimeRef = useRef(simTimeRef.current);
   const lastCameraDistanceRef = useRef(-1);
+  const lastPhoneViewportRef = useRef(isPhonePointViewport());
+  const sizeTargetRef = useRef<Map<string, number>>(new Map());
+  const fitDistanceRef = useRef(fitCameraDistance);
+  const maxDistanceRef = useRef(maxCameraDistance);
+  fitDistanceRef.current = fitCameraDistance;
+  maxDistanceRef.current = maxCameraDistance;
 
   const seedPositions = useCallback(
     (groupList: RenderGroup[]) => {
@@ -121,8 +130,28 @@ export function SatelliteField({
     [simTimeRef],
   );
 
+  const syncSizeTargets = useCallback(
+    (cameraDistance: number, groupList: RenderGroup[]) => {
+      const zoomScale = resolveZoomScale(
+        cameraDistance,
+        fitDistanceRef.current,
+        maxDistanceRef.current,
+      );
+      for (const group of groupList) {
+        sizeTargetRef.current.set(
+          group.key,
+          resolvePointSize(group.sizeClass, zoomScale),
+        );
+      }
+      lastCameraDistanceRef.current = cameraDistance;
+      lastPhoneViewportRef.current = isPhonePointViewport();
+    },
+    [],
+  );
+
   useLayoutEffect(() => {
     seedPositions(groups);
+    syncSizeTargets(camera.position.length(), groups);
 
     for (const group of groups) {
       const node = pointsRefs.current.get(group.key) as THREE.Points | undefined;
@@ -132,15 +161,18 @@ export function SatelliteField({
       geometry.setAttribute("position", new THREE.BufferAttribute(group.display, 3));
       const positionAttr = geometry.attributes.position;
       if (positionAttr) positionAttr.needsUpdate = true;
-    }
-  }, [groups, seedPositions]);
 
-  useFrame(({ camera }, delta) => {
+      const target =
+        sizeTargetRef.current.get(group.key) ?? resolvePointSize(group.sizeClass);
+      (node.material as THREE.PointsMaterial).size = target;
+    }
+  }, [camera, groups, seedPositions, syncSizeTargets]);
+
+  useFrame((_, delta) => {
     const activeGroups = groupsRef.current;
     if (activeGroups.length === 0) return;
 
     const simTime = simTimeRef.current;
-    const cameraDistance = camera.position.length();
     const now = performance.now();
     const simTimeChanged = simTime !== lastSimTimeRef.current;
     const timeJumpMs = Math.abs(simTime - lastSimTimeRef.current);
@@ -187,13 +219,32 @@ export function SatelliteField({
       }
     }
 
-    const cameraMoved =
-      Math.abs(cameraDistance - lastCameraDistanceRef.current) >= CAMERA_SIZE_EPSILON;
-    if (cameraMoved) {
-      lastCameraDistanceRef.current = cameraDistance;
+    const cameraDistance = camera.position.length();
+    const phoneViewport = isPhonePointViewport();
+    if (
+      Math.abs(cameraDistance - lastCameraDistanceRef.current) >= CAMERA_SIZE_EPSILON ||
+      phoneViewport !== lastPhoneViewportRef.current
+    ) {
+      syncSizeTargets(cameraDistance, activeGroups);
     }
 
-    if (!isBlending && !shouldPropagate && !cameraMoved) return;
+    let sizeSettling = false;
+    for (const group of activeGroups) {
+      const node = pointsRefs.current.get(group.key) as THREE.Points | undefined;
+      if (!node) continue;
+      const material = node.material as THREE.PointsMaterial;
+      const target =
+        sizeTargetRef.current.get(group.key) ?? resolvePointSize(group.sizeClass);
+      const deltaSize = target - material.size;
+      if (Math.abs(deltaSize) > SIZE_SETTLE_EPSILON) {
+        material.size += deltaSize * Math.min(1, delta * SIZE_FOLLOW_RATE);
+        sizeSettling = true;
+      } else if (Math.abs(deltaSize) > 1e-4) {
+        material.size = target;
+      }
+    }
+
+    if (!isBlending && !shouldPropagate && !sizeSettling) return;
 
     for (const group of activeGroups) {
       const node = pointsRefs.current.get(group.key) as THREE.Points | undefined;
@@ -202,11 +253,6 @@ export function SatelliteField({
       if (isBlending || shouldPropagate) {
         const positionAttr = node.geometry.attributes.position;
         if (positionAttr) positionAttr.needsUpdate = true;
-      }
-
-      if (cameraMoved) {
-        const material = node.material as THREE.PointsMaterial;
-        material.size = resolvePointSize(group.sizePolicy, cameraDistance, maxCameraDistance);
       }
     }
   });
@@ -226,12 +272,10 @@ export function SatelliteField({
           <bufferGeometry />
           <pointsMaterial
             color={group.color}
-            size={resolvePointSize(group.sizePolicy, DEFAULT_CAMERA_DISTANCE, maxCameraDistance)}
+            size={resolvePointSize(group.sizeClass)}
             sizeAttenuation={false}
-            map={pointTexture ?? undefined}
-            alphaTest={0.5}
-            transparent
             toneMapped={false}
+            depthTest
             depthWrite={false}
           />
         </points>

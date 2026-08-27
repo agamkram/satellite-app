@@ -56,7 +56,11 @@ export function OrbitalScene({
         far: 200,
       }}
       dpr={[1, 1.5]}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      gl={{
+        antialias: true,
+        powerPreference: "high-performance",
+        logarithmicDepthBuffer: true,
+      }}
       style={{ touchAction: "none" }}
     >
       <CameraFit
@@ -84,6 +88,7 @@ export function OrbitalScene({
         visibleConstellations={visibleConstellations}
         simTimeRef={simTimeRef}
         scrubbingRef={scrubbingRef}
+        fitCameraDistance={fitCameraDistance}
         maxCameraDistance={maxCameraDistance}
       />
       <OrbitControls

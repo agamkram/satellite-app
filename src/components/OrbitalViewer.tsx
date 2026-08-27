@@ -103,12 +103,24 @@ export function OrbitalViewer() {
     );
 
     if (!portrait || !portraitDockRef.current) {
-      setPortraitDockLayout(null);
+      setPortraitDockLayout((prev) => (prev === null ? prev : null));
       return;
     }
 
     const dockHeight = portraitDockRef.current.offsetHeight;
-    setPortraitDockLayout(measurePortraitDockLayout(dockHeight));
+    const next = measurePortraitDockLayout(dockHeight);
+    setPortraitDockLayout((prev) => {
+      if (prev === null) return next;
+      if (prev.mode === "bottom" && next.mode === "bottom") return prev;
+      if (
+        prev.mode === "top" &&
+        next.mode === "top" &&
+        prev.top === next.top
+      ) {
+        return prev;
+      }
+      return next;
+    });
   }, []);
 
   const updateLandscapeDock = useCallback(() => {
@@ -183,7 +195,7 @@ export function OrbitalViewer() {
     updateLandscapeDock();
 
     return () => observer.disconnect();
-  }, [portraitPhone, simTime, offsetHours, speed, updateLandscapeDock]);
+  }, [portraitPhone, updateLandscapeDock]);
 
   useEffect(() => {
     if (!portraitPhone || !portraitDockRef.current) return;
@@ -199,7 +211,7 @@ export function OrbitalViewer() {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [portraitPhone, simTime, offsetHours, speed, updatePortraitDock]);
+  }, [portraitPhone, updatePortraitDock]);
 
   const activeConstellations = useMemo(
     () =>
@@ -329,27 +341,27 @@ export function OrbitalViewer() {
           .map((satellite) => parseOmmRecord(satellite.omm, satellite.constellationId))
           .filter((satellite): satellite is SatelliteRecord => satellite !== null);
 
-        const nextCounts = Object.fromEntries(
-          responses.map((result) => [result.constellationId, result.count]),
-        );
-
         setSatellites(parsed);
-        setCounts(nextCounts);
+        setCounts(
+          Object.fromEntries(
+            responses.map((result) => [result.constellationId, result.count]),
+          ),
+        );
 
         if (failures.length > 0) {
           setWarning(`Some groups could not be loaded: ${failures.join("; ")}`);
         }
       } catch (fetchError) {
         if (cancelled) return;
-        const message =
-          fetchError instanceof Error ? fetchError.message : "Failed to load satellites";
-        setError(message);
+        setError(
+          fetchError instanceof Error ? fetchError.message : "Failed to load satellites",
+        );
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     }
 
-    loadSatellites();
+    void loadSatellites();
 
     return () => {
       cancelled = true;

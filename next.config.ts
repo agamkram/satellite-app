@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["satellite.js"],
+  // Strict Mode double-mounts the tree in dev, which remounts the WebGL canvas
+  // and looks like the app “opens twice.”
+  reactStrictMode: false,
   devIndicators: false,
   // Safe cache: long-lived textures, short icon cache, always revalidate HTML/JS.
   headers: async () => [

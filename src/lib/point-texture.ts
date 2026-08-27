@@ -35,12 +35,3 @@ export function getStarPointTexture() {
     ctx.fillRect(3, 3, 2, 2);
   });
 }
-
-export function getSatellitePointTexture() {
-  return createCanvasTexture("satellite", 32, (ctx, size) => {
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size * 0.4375, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}

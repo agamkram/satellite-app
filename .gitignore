@@ -25,6 +25,7 @@
 .npm-cache
 .celestrak-cache
 *.pem
+/certificates/
 
 # local deploy helpers (not part of the app)
 PUSH-TO-GITHUB.command
