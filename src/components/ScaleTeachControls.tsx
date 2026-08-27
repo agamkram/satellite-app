@@ -59,7 +59,8 @@ export function ScaleTeachControls({
       const wide = window.matchMedia("(min-width: 640px)").matches;
       setInset(getCornerInset(wide));
       setViewportHeight(window.visualViewport?.height ?? window.innerHeight);
-      setPhoneLayout(isPhonePointViewport());
+      // Keep Mag below True scale on Mac, including narrow windows.
+      setPhoneLayout(isPhonePointViewport() && !isDesktopPointer());
     };
 
     update();
