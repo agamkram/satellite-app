@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
   // and looks like the app “opens twice.”
   reactStrictMode: false,
   devIndicators: false,
+  // Dev only: phone/tablet on the LAN must load /_next/* (otherwise 403 and no sats).
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    "192.168.*.*",
+    "10.*.*.*",
+    "172.*.*.*",
+    "*.local",
+  ],
   // Safe cache: long-lived textures, short icon cache, always revalidate HTML/JS.
   headers: async () => [
     {

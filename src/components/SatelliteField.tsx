@@ -14,8 +14,11 @@ import {
   getSizeClass,
   isPhonePointViewport,
   resolvePointSize,
+  resolveTrueScalePointSize,
   resolveZoomScale,
   SizeClass,
+  smoothstep01,
+  TRUE_SCALE_TRANSITION_SEC,
 } from "@/lib/satellite-point-size";
 
 const PROPAGATE_INTERVAL_MS = 50;
@@ -42,6 +45,7 @@ interface SatelliteFieldProps {
   scrubbingRef: React.RefObject<boolean>;
   fitCameraDistance: number;
   maxCameraDistance: number;
+  trueScale?: boolean;
 }
 
 function buildGroups(satelliteList: SatelliteRecord[]): RenderGroup[] {
@@ -89,6 +93,7 @@ export function SatelliteField({
   scrubbingRef,
   fitCameraDistance,
   maxCameraDistance,
+  trueScale = false,
 }: SatelliteFieldProps) {
   const { camera } = useThree();
   const pointsRefs = useRef<Map<string, THREE.Object3D>>(new Map());
@@ -103,6 +108,10 @@ export function SatelliteField({
   const lastCameraDistanceRef = useRef(-1);
   const lastPhoneViewportRef = useRef(isPhonePointViewport());
   const sizeTargetRef = useRef<Map<string, number>>(new Map());
+  /** 0 = exaggerated (visible), 1 = true scale (vanished). Animates on toggle. */
+  const trueScaleMixRef = useRef(trueScale ? 1 : 0);
+  const trueScaleRef = useRef(trueScale);
+  trueScaleRef.current = trueScale;
   const fitDistanceRef = useRef(fitCameraDistance);
   const maxDistanceRef = useRef(maxCameraDistance);
   fitDistanceRef.current = fitCameraDistance;
@@ -153,6 +162,10 @@ export function SatelliteField({
     seedPositions(groups);
     syncSizeTargets(camera.position.length(), groups);
 
+    const mix = trueScaleMixRef.current;
+    const visualT = smoothstep01(mix);
+    const atTrue = visualT >= 1 - 1e-6;
+
     for (const group of groups) {
       const node = pointsRefs.current.get(group.key) as THREE.Points | undefined;
       if (!node) continue;
@@ -162,9 +175,19 @@ export function SatelliteField({
       const positionAttr = geometry.attributes.position;
       if (positionAttr) positionAttr.needsUpdate = true;
 
-      const target =
+      const material = node.material as THREE.PointsMaterial;
+      const exaggerated =
         sizeTargetRef.current.get(group.key) ?? resolvePointSize(group.sizeClass);
-      (node.material as THREE.PointsMaterial).size = target;
+      // Opacity fade — mobile GPUs clamp point size to ~1px, so size alone won't vanish.
+      material.transparent = true;
+      material.opacity = atTrue ? 0 : 1 - visualT;
+      if (atTrue) {
+        material.sizeAttenuation = true;
+        material.size = resolveTrueScalePointSize(group.sizeClass);
+      } else {
+        material.sizeAttenuation = false;
+        material.size = exaggerated * (1 - visualT);
+      }
     }
   }, [camera, groups, seedPositions, syncSizeTargets]);
 
@@ -219,22 +242,54 @@ export function SatelliteField({
       }
     }
 
+    const wantTrue = trueScaleRef.current;
+    const mixTarget = wantTrue ? 1 : 0;
+    let mix = trueScaleMixRef.current;
+    let scaleTransitioning = false;
+    if (mix !== mixTarget) {
+      const step = delta / TRUE_SCALE_TRANSITION_SEC;
+      mix = mix < mixTarget ? Math.min(mixTarget, mix + step) : Math.max(mixTarget, mix - step);
+      trueScaleMixRef.current = mix;
+      scaleTransitioning = mix !== mixTarget;
+    }
+    const visualT = smoothstep01(mix);
+    const atTrue = visualT >= 1 - 1e-6;
+
     const cameraDistance = camera.position.length();
     const phoneViewport = isPhonePointViewport();
     if (
-      Math.abs(cameraDistance - lastCameraDistanceRef.current) >= CAMERA_SIZE_EPSILON ||
-      phoneViewport !== lastPhoneViewportRef.current
+      !atTrue &&
+      (Math.abs(cameraDistance - lastCameraDistanceRef.current) >= CAMERA_SIZE_EPSILON ||
+        phoneViewport !== lastPhoneViewportRef.current)
     ) {
       syncSizeTargets(cameraDistance, activeGroups);
     }
 
-    let sizeSettling = false;
+    let sizeSettling = scaleTransitioning;
     for (const group of activeGroups) {
       const node = pointsRefs.current.get(group.key) as THREE.Points | undefined;
       if (!node) continue;
       const material = node.material as THREE.PointsMaterial;
-      const target =
+      const exaggerated =
         sizeTargetRef.current.get(group.key) ?? resolvePointSize(group.sizeClass);
+
+      material.transparent = true;
+      const opacityTarget = atTrue ? 0 : 1 - visualT;
+      if (material.opacity !== opacityTarget) material.opacity = opacityTarget;
+
+      if (atTrue) {
+        if (!material.sizeAttenuation) material.sizeAttenuation = true;
+        const target = resolveTrueScalePointSize(group.sizeClass);
+        if (material.size !== target) material.size = target;
+        continue;
+      }
+
+      if (material.sizeAttenuation) material.sizeAttenuation = false;
+      const target = exaggerated * (1 - visualT);
+      if (scaleTransitioning) {
+        material.size = target;
+        continue;
+      }
       const deltaSize = target - material.size;
       if (Math.abs(deltaSize) > SIZE_SETTLE_EPSILON) {
         material.size += deltaSize * Math.min(1, delta * SIZE_FOLLOW_RATE);
@@ -274,6 +329,8 @@ export function SatelliteField({
             color={group.color}
             size={resolvePointSize(group.sizeClass)}
             sizeAttenuation={false}
+            transparent
+            opacity={1}
             toneMapped={false}
             depthTest
             depthWrite={false}

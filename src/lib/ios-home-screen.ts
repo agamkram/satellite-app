@@ -70,11 +70,12 @@ function getInsetProbe(): HTMLDivElement {
   return insetProbe;
 }
 
-function readEnvInset(property: "top" | "right" | "bottom"): number {
+function readEnvInset(property: "top" | "right" | "bottom" | "left"): number {
   const probe = getInsetProbe();
   probe.style.paddingTop = property === "top" ? "env(safe-area-inset-top)" : "0px";
   probe.style.paddingRight = property === "right" ? "env(safe-area-inset-right)" : "0px";
   probe.style.paddingBottom = property === "bottom" ? "env(safe-area-inset-bottom)" : "0px";
+  probe.style.paddingLeft = property === "left" ? "env(safe-area-inset-left)" : "0px";
 
   const style = getComputedStyle(probe);
   const value =
@@ -82,7 +83,9 @@ function readEnvInset(property: "top" | "right" | "bottom"): number {
       ? style.paddingTop
       : property === "right"
         ? style.paddingRight
-        : style.paddingBottom;
+        : property === "left"
+          ? style.paddingLeft
+          : style.paddingBottom;
   return parseFloat(value) || 0;
 }
 
@@ -95,14 +98,19 @@ function fallbackSafeAreaTop(): number {
   return 20;
 }
 
-export function measureHomeScreenInsets(): { top: number; right: number } {
+export function measureHomeScreenInsets(): {
+  top: number;
+  right: number;
+  left: number;
+} {
   if (!isIosHomeScreen()) {
-    return { top: 0, right: 0 };
+    return { top: 0, right: 0, left: 0 };
   }
 
   return {
     top: readEnvInset("top") || window.visualViewport?.offsetTop || fallbackSafeAreaTop(),
     right: readEnvInset("right"),
+    left: readEnvInset("left"),
   };
 }
 

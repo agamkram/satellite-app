@@ -1,10 +1,16 @@
-import { SatelliteRecord } from "@/lib/satellite-math";
+import {
+  CAMERA_FOV,
+  GLOBE_RADIUS,
+  SCENE_SCALE,
+  SatelliteRecord,
+} from "@/lib/satellite-math";
 
 /**
  * Dialable satellite point sizing.
  *
  * Default + zoomed-in: full CLASS_PIXELS.
  * Past opening fit: smooth shrink toward MIN_SCALE (no band snaps).
+ * True scale: characteristic length in meters → scene units (usually invisible).
  */
 export const SIZE_SCALE = 1;
 /** Phones only — Mac/iPad stay at full size (finer look). Dial down to match. */
@@ -32,6 +38,17 @@ const MIN_SCALE: Record<SizeClass, number> = {
   station: 0.85,
   nav: 0.72,
   mega: 0.36,
+};
+
+/**
+ * Rough longest dimension (meters) for pedagogical true scale.
+ * Points are still an approximation — real craft are not spheres.
+ */
+const TRUE_LENGTH_M: Record<SizeClass, number> = {
+  iss: 109,
+  station: 55,
+  nav: 5,
+  mega: 3,
 };
 
 /** Shrink begins slightly past opening fit; finishes toward max zoom. */
@@ -89,4 +106,59 @@ export function resolvePointSize(
   const scale = minScale + (1 - minScale) * zoomScale;
   const phoneScale = isPhonePointViewport() ? PHONE_SIZE_SCALE : 1;
   return CLASS_PIXELS[sizeClass] * scale * SIZE_SCALE * phoneScale;
+}
+
+/** World-unit point size for true scale (pair with sizeAttenuation). */
+export function resolveTrueScalePointSize(sizeClass: SizeClass): number {
+  return (TRUE_LENGTH_M[sizeClass] / 1000) * SCENE_SCALE;
+}
+
+/** Seconds to animate exaggerated ↔ true (shrink/grow for teaching). */
+export const TRUE_SCALE_TRANSITION_SEC = 1.15;
+
+/** Representative Starlink-shell altitude for mega teaching math. */
+export const MEGA_TEACH_ALT_KM = 550;
+
+export function smoothstep01(t: number): number {
+  return smoothstep(t);
+}
+
+/**
+ * How many times larger drawn mega points are vs true projected size
+ * at the current camera distance (side-on LEO shell).
+ */
+export function resolveMegaMagnification(options: {
+  cameraDistance: number;
+  fitCameraDistance: number;
+  maxCameraDistance: number;
+  viewportHeightPx: number;
+  trueScale?: boolean;
+}): number {
+  if (options.trueScale) return 1;
+
+  const zoomScale = resolveZoomScale(
+    options.cameraDistance,
+    options.fitCameraDistance,
+    options.maxCameraDistance,
+  );
+  const drawnPx = resolvePointSize("mega", zoomScale);
+  const satRadius = GLOBE_RADIUS + MEGA_TEACH_ALT_KM * SCENE_SCALE;
+  const camToSat = Math.hypot(options.cameraDistance, satRadius);
+  const world = resolveTrueScalePointSize("mega");
+  const halfFovRad = ((CAMERA_FOV * Math.PI) / 180) / 2;
+  const vh = Math.max(options.viewportHeightPx, 1);
+  const truePx =
+    (world * (vh / 2)) / (Math.max(camToSat, 0.05) * Math.tan(halfFovRad));
+
+  return Math.max(1, drawnPx / Math.max(truePx, 1e-12));
+}
+
+/** Compact chip label, e.g. "~2,400×". */
+export function formatMagnification(magnification: number): string {
+  const n = Math.max(1, magnification);
+  if (n < 10) return `~${Math.round(n)}×`;
+  if (n < 100) return `~${Math.round(n)}×`;
+  if (n < 1000) return `~${(Math.round(n / 10) * 10).toLocaleString()}×`;
+  if (n < 10000) return `~${(Math.round(n / 100) * 100).toLocaleString()}×`;
+  return `~${(Math.round(n / 1000) * 1000).toLocaleString()}×`;
 }

@@ -9,6 +9,7 @@ import {
   CAMERA_MIN_DISTANCE,
   SatelliteRecord,
 } from "@/lib/satellite-math";
+import { CameraDistanceReporter } from "./CameraDistanceReporter";
 import { CameraFit } from "./CameraFit";
 import { Earth } from "./Earth";
 import { SatelliteField } from "./SatelliteField";
@@ -29,6 +30,8 @@ interface OrbitalSceneProps {
   cameraPosition?: [number, number, number];
   viewOffsetY?: number;
   cardMode?: boolean;
+  trueScale?: boolean;
+  onCameraDistance?: (distance: number) => void;
 }
 
 export function OrbitalScene({
@@ -45,6 +48,8 @@ export function OrbitalScene({
   cameraPosition,
   viewOffsetY = 0,
   cardMode = false,
+  trueScale = false,
+  onCameraDistance,
 }: OrbitalSceneProps) {
   return (
     <Canvas
@@ -68,6 +73,9 @@ export function OrbitalScene({
         position={cameraPosition}
         viewOffsetY={viewOffsetY}
       />
+      {onCameraDistance ? (
+        <CameraDistanceReporter onDistance={onCameraDistance} />
+      ) : null}
       <SceneClock
         speedRef={speedRef}
         baseTimeRef={baseTimeRef}
@@ -90,6 +98,7 @@ export function OrbitalScene({
         scrubbingRef={scrubbingRef}
         fitCameraDistance={fitCameraDistance}
         maxCameraDistance={maxCameraDistance}
+        trueScale={trueScale}
       />
       <OrbitControls
         enablePan={false}

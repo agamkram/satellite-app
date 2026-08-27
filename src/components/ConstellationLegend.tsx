@@ -71,6 +71,22 @@ export function ConstellationLegend({
     };
   }, []);
 
+  // Close on outside tap without a full-screen blocker (that kills zoom).
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      const btn = document.getElementById("ov-constellation-btn");
+      const panel = document.getElementById("ov-constellation-panel");
+      if (btn?.contains(target) || panel?.contains(target)) return;
+      onOpenChange(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [open, onOpenChange]);
+
   const sortedConstellations = useMemo(
     () =>
       [...CONSTELLATIONS].sort(
@@ -87,15 +103,6 @@ export function ConstellationLegend({
 
   return createPortal(
     <>
-      {open ? (
-        <button
-          type="button"
-          aria-label="Dismiss constellations"
-          onClick={() => onOpenChange(false)}
-          className="fixed inset-0 z-[99999] cursor-default bg-transparent"
-        />
-      ) : null}
-
       <button
         id="ov-constellation-btn"
         type="button"

@@ -25,6 +25,7 @@ import {
   computeFitCameraDistance,
   computeMaxOrbitalRadiusScene,
   DESKTOP_EARTH_FIT_MARGIN,
+  DEFAULT_EARTH_CAMERA_DISTANCE,
   DEFAULT_MAX_CAMERA_DISTANCE,
   parseOmmRecord,
   SatelliteRecord,
@@ -32,6 +33,7 @@ import {
 } from "@/lib/satellite-math";
 import { ConstellationLegend } from "./ConstellationLegend";
 import { OrbitalScene } from "./OrbitalScene";
+import { ScaleTeachControls } from "./ScaleTeachControls";
 import { TimeControls } from "./TimeControls";
 
 function buildInitialVisibility(cardMode: boolean) {
@@ -60,6 +62,8 @@ export function OrbitalViewer() {
     buildInitialVisibility(cardMode),
   );
   const [legendOpen, setLegendOpen] = useState(false);
+  const [trueScale, setTrueScale] = useState(false);
+  const [cameraDistance, setCameraDistance] = useState(DEFAULT_EARTH_CAMERA_DISTANCE);
 
   const baseTimeRef = useRef(Date.now());
   const simTimeRef = useRef(Date.now());
@@ -470,6 +474,8 @@ export function OrbitalViewer() {
             cameraPosition={cardMode ? cardCameraPosition : undefined}
             viewOffsetY={desktopViewOffsetY}
             cardMode={cardMode}
+            trueScale={trueScale}
+            onCameraDistance={setCameraDistance}
           />
         ) : null}
       </div>
@@ -490,10 +496,33 @@ export function OrbitalViewer() {
         />
       ) : null}
 
+      {!cardMode ? (
+        <ScaleTeachControls
+          trueScale={trueScale}
+          onTrueScaleChange={setTrueScale}
+          cameraDistance={cameraDistance}
+          fitCameraDistance={fitCameraDistance}
+          maxCameraDistance={maxCameraDistance}
+        />
+      ) : null}
+
       <div className="pointer-events-none absolute inset-0 z-10">
         {!cardMode && warning ? (
           <div className="pointer-events-auto absolute left-1/2 top-[calc(0.375in+env(safe-area-inset-top,0px)+0.35rem)] z-30 max-w-md -translate-x-1/2 rounded-full border border-amber-400/25 bg-amber-950/80 px-3 py-1.5 text-center text-xs text-amber-100">
             {warning}
+          </div>
+        ) : null}
+
+        {!cardMode && trueScale ? (
+          <div className="pointer-events-none absolute left-1/2 top-[calc(0.375in+env(safe-area-inset-top,0px)+2.75rem)] z-30 w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-white/10 bg-black/[0.02] px-3 py-1.5 text-center text-xs leading-snug text-white/85 backdrop-blur-sm">
+            <span className="block font-medium text-white/85">
+              Shrinking to true size
+            </span>
+            <span className="mt-0.5 block line-clamp-3 text-white/85">
+              Satellite dots are drawn far larger than real so you can see them
+              (see Mag). Real craft are ~3&nbsp;m; Earth is ~12,700&nbsp;km — so
+              they vanish.
+            </span>
           </div>
         ) : null}
 
