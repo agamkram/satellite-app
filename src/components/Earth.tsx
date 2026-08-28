@@ -3,12 +3,14 @@
 import { useTexture } from "@react-three/drei";
 import { GLOBE_RADIUS } from "@/lib/satellite-math";
 
+export const EARTH_TEXTURE_URL = "/earth.jpg";
+
 interface EarthProps {
   rotationY?: number;
 }
 
 export function Earth({ rotationY = 0 }: EarthProps) {
-  const earthTexture = useTexture("/earth.jpg");
+  const earthTexture = useTexture(EARTH_TEXTURE_URL);
 
   return (
     <group rotation={[0, rotationY, 0]}>

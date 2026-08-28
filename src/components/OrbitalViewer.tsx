@@ -32,6 +32,7 @@ import {
   SerializedSatellite,
 } from "@/lib/satellite-math";
 import { ConstellationLegend } from "./ConstellationLegend";
+import { EARTH_TEXTURE_URL } from "./Earth";
 import { OrbitalScene } from "./OrbitalScene";
 import { ScaleTeachControls } from "./ScaleTeachControls";
 import { TimeControls } from "./TimeControls";
@@ -52,7 +53,6 @@ export function OrbitalViewer() {
   const cardMode = isCardPreview(searchParams);
   const [satellites, setSatellites] = useState<SatelliteRecord[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [speed, setSpeed] = useState(DEFAULT_PLAYBACK_SPEED);
@@ -61,6 +61,7 @@ export function OrbitalViewer() {
   const [visibleConstellations, setVisibleConstellations] = useState(() =>
     buildInitialVisibility(cardMode),
   );
+  const [earthReady, setEarthReady] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [trueScale, setTrueScale] = useState(false);
   const [cameraDistance, setCameraDistance] = useState(DEFAULT_EARTH_CAMERA_DISTANCE);
@@ -137,7 +138,6 @@ export function OrbitalViewer() {
   }, []);
 
   useEffect(() => {
-    setUiMounted(true);
     let layoutReady = false;
     let layoutShownAt = 0;
     let cancelled = false;
@@ -150,6 +150,11 @@ export function OrbitalViewer() {
       updatePortraitDock();
       updateLandscapeDock();
     };
+
+    // Bug C: pick the dock orientation in the same commit that reveals it,
+    // so the first painted dock is already the right one.
+    updateViewport(true);
+    setUiMounted(true);
 
     void (async () => {
       syncPwaFillHeight();
@@ -286,7 +291,6 @@ export function OrbitalViewer() {
 
     async function loadSatellites() {
       try {
-        setLoading(true);
         setError(null);
         setWarning(null);
 
@@ -360,8 +364,6 @@ export function OrbitalViewer() {
         setError(
           fetchError instanceof Error ? fetchError.message : "Failed to load satellites",
         );
-      } finally {
-        setLoading(false);
       }
     }
 
@@ -371,6 +373,22 @@ export function OrbitalViewer() {
       cancelled = true;
     };
   }, [activeConstellations]);
+
+  // Warm the browser cache for the globe texture so useTexture resolves from
+  // it, letting Earth and the satellites reveal in the same frame.
+  useEffect(() => {
+    const image = new window.Image();
+    const done = () => setEarthReady(true);
+
+    image.onload = done;
+    image.onerror = done;
+    image.src = EARTH_TEXTURE_URL;
+
+    return () => {
+      image.onload = null;
+      image.onerror = null;
+    };
+  }, []);
 
   const handleScrubStart = useCallback(() => {
     scrubbingRef.current = true;
@@ -440,10 +458,15 @@ export function OrbitalViewer() {
     </div>
   );
 
+  // The dock must mount before it can be measured. Until then its slot is
+  // unknown, and bottom:0 would sit under the Safari toolbar — so reserve the
+  // space without painting it.
   const portraitDockStyle =
-    portraitDockLayout?.mode === "top"
-      ? { top: portraitDockLayout.top, bottom: "auto" as const }
-      : { bottom: 0, top: "auto" as const };
+    portraitDockLayout === null
+      ? { bottom: 0, top: "auto" as const, visibility: "hidden" as const }
+      : portraitDockLayout.mode === "top"
+        ? { top: portraitDockLayout.top, bottom: "auto" as const }
+        : { bottom: 0, top: "auto" as const };
 
   const portraitTimeControlsDock = (
     <div
@@ -457,9 +480,9 @@ export function OrbitalViewer() {
   );
 
   return (
-    <div id="ov-root" className="text-white">
+    <div id="ov-root" className="text-white" data-ov-catalog={satellites.length > 0 ? "ready" : "pending"}>
       <div className="absolute inset-0">
-        {!loading && satellites.length > 0 ? (
+        {!cardMode || satellites.length > 0 ? (
           <OrbitalScene
             satellites={satellites}
             visibleConstellations={visibleConstellations}
@@ -476,6 +499,7 @@ export function OrbitalViewer() {
             cardMode={cardMode}
             trueScale={trueScale}
             onCameraDistance={setCameraDistance}
+            contentReady={earthReady && satellites.length > 0}
           />
         ) : null}
       </div>
@@ -526,20 +550,12 @@ export function OrbitalViewer() {
           </div>
         ) : null}
 
-        {!cardMode && !portraitPhone ? landscapeTimeControlsDock : null}
+        {!cardMode && uiMounted && !portraitPhone ? landscapeTimeControlsDock : null}
       </div>
 
       {!cardMode && uiMounted && portraitPhone
         ? createPortal(portraitTimeControlsDock, document.body)
         : null}
-
-      {loading ? (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#02040a]/80 backdrop-blur-sm">
-          <div className="rounded-2xl border border-white/10 bg-black/70 px-6 py-4 text-center">
-            <p className="text-sm text-white/80">Loading satellite catalog…</p>
-          </div>
-        </div>
-      ) : null}
 
       {error ? (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#02040a]/85 backdrop-blur-sm">

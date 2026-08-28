@@ -2,6 +2,7 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import { Suspense } from "react";
 
 import { CARD_EARTH_ROTATION_Y } from "@/lib/card-preview";
 import {
@@ -32,6 +33,7 @@ interface OrbitalSceneProps {
   cardMode?: boolean;
   trueScale?: boolean;
   onCameraDistance?: (distance: number) => void;
+  contentReady?: boolean;
 }
 
 export function OrbitalScene({
@@ -50,6 +52,7 @@ export function OrbitalScene({
   cardMode = false,
   trueScale = false,
   onCameraDistance,
+  contentReady = true,
 }: OrbitalSceneProps) {
   return (
     <Canvas
@@ -90,16 +93,25 @@ export function OrbitalScene({
         intensity={cardMode ? 1.05 : 1.4}
       />
       <Starfield />
-      <Earth rotationY={cardMode ? CARD_EARTH_ROTATION_Y : 0} />
-      <SatelliteField
-        satellites={satellites}
-        visibleConstellations={visibleConstellations}
-        simTimeRef={simTimeRef}
-        scrubbingRef={scrubbingRef}
-        fitCameraDistance={fitCameraDistance}
-        maxCameraDistance={maxCameraDistance}
-        trueScale={trueScale}
-      />
+      {/* Earth's texture suspends. The boundary keeps that from reaching the
+          page, which would hide the whole UI; holding the globe and the dots
+          together keeps them from popping in separately. */}
+      <Suspense fallback={null}>
+        {contentReady ? (
+          <>
+            <Earth rotationY={cardMode ? CARD_EARTH_ROTATION_Y : 0} />
+            <SatelliteField
+              satellites={satellites}
+              visibleConstellations={visibleConstellations}
+              simTimeRef={simTimeRef}
+              scrubbingRef={scrubbingRef}
+              fitCameraDistance={fitCameraDistance}
+              maxCameraDistance={maxCameraDistance}
+              trueScale={trueScale}
+            />
+          </>
+        ) : null}
+      </Suspense>
       <OrbitControls
         enablePan={false}
         minDistance={CAMERA_MIN_DISTANCE}
