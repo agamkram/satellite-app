@@ -1,0 +1,112 @@
+# Daily catalog bake. GitHub runners replace the laptop morning fetch
+# (`npm run fetch:sats`). Vercel deploys from main when the nine
+# public/data *-fallback.json files change.
+#
+# Schedule: 14:00 UTC = 10:00 America/New_York while EDT (UTC-4) is in effect.
+# After the US falls back to EST (UTC-5), this same cron is 09:00 ET. GitHub cron
+# cannot follow DST; leave at 14:00 UTC unless you want 10:00 EST (15:00 UTC).
+name: Catalog bake
+
+on:
+  schedule:
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Fetch without committing or pushing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: orbital-catalog
+  cancel-in-progress: false
+
+jobs:
+  catalog:
+    name: Bake satellite catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TZ: America/New_York
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # package.json engines.node is "20.x" — setup-node reads that file.
+          node-version-file: package.json
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch satellite catalog
+        run: |
+          set -euo pipefail
+          if npm run fetch:sats; then
+            echo "Fetch succeeded."
+          else
+            echo "Fetch exited non-zero (CelesTrak group failed or empty). Retrying once..."
+            npm run fetch:sats
+          fi
+
+      - name: Commit and push catalog files
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          files=(
+            public/data/beidou-fallback.json
+            public/data/galileo-fallback.json
+            public/data/glo-ops-fallback.json
+            public/data/gps-ops-fallback.json
+            public/data/iridium-NEXT-fallback.json
+            public/data/kuiper-fallback.json
+            public/data/oneweb-fallback.json
+            public/data/starlink-fallback.json
+            public/data/stations-fallback.json
+          )
+
+          git add -- "${files[@]}"
+
+          if git diff --cached --quiet; then
+            echo "No catalog file changes — nothing to commit."
+            exit 0
+          fi
+
+          extra="$(git diff --cached --name-only | grep -v \
+            -e '^public/data/beidou-fallback.json$' \
+            -e '^public/data/galileo-fallback.json$' \
+            -e '^public/data/glo-ops-fallback.json$' \
+            -e '^public/data/gps-ops-fallback.json$' \
+            -e '^public/data/iridium-NEXT-fallback.json$' \
+            -e '^public/data/kuiper-fallback.json$' \
+            -e '^public/data/oneweb-fallback.json$' \
+            -e '^public/data/starlink-fallback.json$' \
+            -e '^public/data/stations-fallback.json$' \
+            || true)"
+          if [ -n "${extra}" ]; then
+            echo "::error::Refusing to commit unexpected staged files:"
+            echo "${extra}"
+            exit 1
+          fi
+
+          git commit -m "Refresh Orbital View satellite catalog from CelesTrak."
+          git push
+        env:
+          # Default GITHUB_TOKEN with contents: write. If main is protected and
+          # blocks this push, allow github-actions[bot] (or "Allow specified
+          # actors to bypass required pull requests") rather than adding a PAT.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dry run — skip commit
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        run: echo "Dry run — fetch finished; no commit or push."
