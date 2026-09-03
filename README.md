@@ -10,6 +10,8 @@ Interactive 3D map of satellites in Earth orbit.
 
 No environment variables needed. Vercel runs `npm install` and `npm run build` automatically.
 
+The satellite catalog under `public/data` is baked daily by GitHub Actions (`npm run fetch:sats`).
+
 ## What's in this folder
 
 | Path | Purpose |
