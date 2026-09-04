@@ -2,14 +2,12 @@
 # (`npm run fetch:sats`). Vercel deploys from main when the nine
 # public/data *-fallback.json files change.
 #
-# Schedule: 14:00 UTC = 10:00 America/New_York while EDT (UTC-4) is in effect.
-# After the US falls back to EST (UTC-5), this same cron is 09:00 ET. GitHub cron
-# cannot follow DST; leave at 14:00 UTC unless you want 10:00 EST (15:00 UTC).
+# Daily 10:00 America/New_York kickoff is an external Grok Bot
+# workflow_dispatch trigger, not GitHub Actions schedule. Actions cron
+# drifts by hours, so this workflow is dispatch-only.
 name: Catalog bake
 
 on:
-  schedule:
-    - cron: "0 14 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
