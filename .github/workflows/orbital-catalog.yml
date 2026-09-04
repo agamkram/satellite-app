@@ -2,12 +2,16 @@
 # (`npm run fetch:sats`). Vercel deploys from main when the nine
 # public/data *-fallback.json files change.
 #
-# Daily 10:00 America/New_York kickoff is an external Grok Bot
-# workflow_dispatch trigger, not GitHub Actions schedule. Actions cron
-# drifts by hours, so this workflow is dispatch-only.
+# Daily kickoff ~9:23 America/New_York (staggered after Heat at 9:17;
+# after FR PI ~8:45). Odd minute to reduce Actions :00/:30 queue delay.
+# timezone field keeps the slot on ET through DST. Actions cron can
+# still drift; workflow_dispatch remains for manual runs.
 name: Catalog bake
 
 on:
+  schedule:
+    - cron: "23 9 * * *"
+      timezone: "America/New_York"
   workflow_dispatch:
     inputs:
       dry_run:
