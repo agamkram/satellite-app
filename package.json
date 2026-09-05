@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "fetch:sats": "node scripts/fetch-sats.mjs"
+    "fetch:sats": "node scripts/fetch-sats.mjs",
+    "catalog:report": "node scripts/catalog-report.mjs"
   },
   "engines": {
     "node": "20.x"

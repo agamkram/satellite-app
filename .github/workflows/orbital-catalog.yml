@@ -6,6 +6,14 @@
 # after FR PI ~8:45). Odd minute to reduce Actions :00/:30 queue delay.
 # timezone field keeps the slot on ET through DST. Actions cron can
 # still drift; workflow_dispatch remains for manual runs.
+#
+# Email (optional): repo Actions secrets —
+#   BAKE_NOTIFY_TO   your inbox
+#   BAKE_SMTP_HOST   e.g. smtp.gmail.com
+#   BAKE_SMTP_PORT   587
+#   BAKE_SMTP_USER   SMTP login (usually the Gmail address)
+#   BAKE_SMTP_PASS   app password (not the normal Gmail password)
+# Without mail secrets the bake still ships; before/after is always in the job summary.
 name: Catalog bake
 
 on:
@@ -33,6 +41,12 @@ jobs:
     timeout-minutes: 45
     env:
       TZ: America/New_York
+      GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      BAKE_NOTIFY_TO: ${{ secrets.BAKE_NOTIFY_TO }}
+      BAKE_SMTP_HOST: ${{ secrets.BAKE_SMTP_HOST }}
+      BAKE_SMTP_PORT: ${{ secrets.BAKE_SMTP_PORT }}
+      BAKE_SMTP_USER: ${{ secrets.BAKE_SMTP_USER }}
+      BAKE_SMTP_PASS: ${{ secrets.BAKE_SMTP_PASS }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -47,7 +61,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Snapshot before
+        run: node scripts/catalog-report.mjs --snapshot-before /tmp/catalog-before.json
+
       - name: Fetch satellite catalog
+        id: fetch
+        continue-on-error: true
         run: |
           set -euo pipefail
           if npm run fetch:sats; then
@@ -57,8 +76,38 @@ jobs:
             npm run fetch:sats
           fi
 
+      - name: Write before/after report
+        id: report
+        if: always()
+        run: |
+          set -euo pipefail
+          ok=true
+          note=""
+          if [ "${{ steps.fetch.outcome }}" != "success" ]; then
+            ok=false
+            note="Fetch failed. No commit."
+          fi
+          node scripts/catalog-report.mjs \
+            --before /tmp/catalog-before.json \
+            --ok "$ok" \
+            --note "$note" \
+            --out /tmp/bake-report.md
+          cat /tmp/bake-report.md >> "$GITHUB_STEP_SUMMARY"
+          cp /tmp/bake-report.md /tmp/bake-report.txt
+
+      - name: Require bake
+        id: gate
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.fetch.outcome }}" != "success" ]; then
+            echo "::error::Catalog fetch failed."
+            exit 1
+          fi
+          echo "Fetch succeeded."
+
       - name: Commit and push catalog files
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+        if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true) }}
         run: |
           set -euo pipefail
 
@@ -110,5 +159,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Dry run — skip commit
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        if: ${{ success() && github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
         run: echo "Dry run — fetch finished; no commit or push."
+
+      - name: Mail before/after report
+        if: ${{ always() && steps.report.outcome == 'success' && env.BAKE_NOTIFY_TO != '' && env.BAKE_SMTP_HOST != '' && env.BAKE_SMTP_USER != '' && env.BAKE_SMTP_PASS != '' }}
+        uses: dawidd6/action-send-mail@v4
+        with:
+          server_address: ${{ env.BAKE_SMTP_HOST }}
+          server_port: ${{ env.BAKE_SMTP_PORT != '' && env.BAKE_SMTP_PORT || 587 }}
+          secure: false
+          username: ${{ env.BAKE_SMTP_USER }}
+          password: ${{ env.BAKE_SMTP_PASS }}
+          subject: ${{ steps.gate.outcome == 'success' && 'Orbital catalog bake · SUCCESS' || 'Orbital catalog bake · FAIL' }}
+          to: ${{ env.BAKE_NOTIFY_TO }}
+          from: Orbital catalog bake <${{ env.BAKE_SMTP_USER }}>
+          body: file:///tmp/bake-report.txt
+          html_body: file:///tmp/bake-report.md
+
+      - name: Note when mail secrets are missing
+        if: ${{ always() && (env.BAKE_NOTIFY_TO == '' || env.BAKE_SMTP_HOST == '' || env.BAKE_SMTP_USER == '' || env.BAKE_SMTP_PASS == '') }}
+        run: |
+          echo "Mail skipped — add BAKE_NOTIFY_TO, BAKE_SMTP_HOST, BAKE_SMTP_PORT (587), BAKE_SMTP_USER, BAKE_SMTP_PASS under Settings → Secrets → Actions. Report is in the job summary."
