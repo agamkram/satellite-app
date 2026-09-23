@@ -11,7 +11,7 @@
     "catalog:report": "node scripts/catalog-report.mjs"
   },
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
